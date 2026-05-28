@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRRT 临床助手</title>
+<title>血液净化 临床助手</title>
 <style>
 /* ===== CSS Custom Properties ===== */
 :root {
@@ -14,6 +14,7 @@
   --accent-red: #E74C3C;
   --accent-green: #27AE60;
   --accent-amber: #F39C12;
+  --accent-dpmas: #8E44AD;
   --text: #2C3E50;
   --text-secondary: #7F8C8D;
   --border: #D5D8DC;
@@ -31,6 +32,7 @@
   --accent-red: #e74c3c;
   --accent-green: #2ecc71;
   --accent-amber: #f1c40f;
+  --accent-dpmas: #bb8fce;
   --text: #ecf0f1;
   --text-secondary: #95a5a6;
   --border: #2c3e50;
@@ -352,9 +354,76 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 .wf-input-group input { width: 100px; }
 .wf-input-group .unit { color: var(--text-secondary); font-size: 0.85rem; }
 
+/* ===== Modality Selector ===== */
+.modality-bar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.mod-btn {
+  padding: 6px 18px; border: 2px solid var(--border); border-radius: 20px;
+  background: var(--surface); color: var(--text-secondary); cursor: pointer;
+  font-size: 0.85rem; font-family: var(--font); font-weight: 500;
+  transition: all 0.15s;
+}
+.mod-btn:hover { border-color: var(--text-secondary); color: var(--text); }
+.mod-btn.active { color: #fff; }
+.mod-btn.active[data-mod="CRRT"] { background: var(--primary); border-color: var(--primary); }
+.mod-btn.active[data-mod="DPMAS"] { background: #8E44AD; border-color: #8E44AD; }
+.mod-btn.active[data-mod="PE"] { background: var(--accent-red); border-color: var(--accent-red); }
+.mod-btn.active[data-mod="HP"] { background: var(--accent-amber); border-color: var(--accent-amber); color: #333; }
+
+/* ===== Level Toggle ===== */
+.level-toggle {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 14px;
+  background: var(--surface); color: var(--text-secondary); cursor: pointer;
+  font-size: 0.78rem; font-family: var(--font); transition: all 0.15s;
+  white-space: nowrap;
+}
+.level-toggle:hover { border-color: var(--primary-light); color: var(--primary); }
+.level-toggle.advanced { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* ===== Content Level Visibility ===== */
+body[data-level="basic"] .advanced-only { display: none; }
+body[data-level="advanced"] .basic-only { display: none; }
+
+/* ===== Decision Pathway ===== */
+.decision-card {
+  border-left: 4px solid var(--primary); padding: 16px 20px;
+  background: var(--surface); border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 12px 0;
+}
+.decision-card.crrt { border-left-color: var(--primary); }
+.decision-card.dpmas { border-left-color: #8E44AD; }
+.decision-card.pe { border-left-color: var(--accent-red); }
+.decision-card.hp { border-left-color: var(--accent-amber); }
+.decision-card h4 { margin-bottom: 4px; }
+.decision-card .badge {
+  display: inline-block; padding: 2px 10px; border-radius: 12px;
+  font-size: 0.75rem; font-weight: 700; margin-right: 8px;
+}
+.badge-strong { background: #d5f5e3; color: #1e8449; }
+.badge-weak { background: #fef9e7; color: #7d6608; }
+[data-theme="dark"] .badge-strong { background: #1a3a2a; color: #82e0aa; }
+[data-theme="dark"] .badge-weak { background: #3a2e0a; color: #f9e79f; }
+
+/* ===== Parameter Quick Reference ===== */
+.param-ref-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.param-ref-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.param-ref-table td:first-child { font-weight: 600; color: var(--text-secondary); width: 40%; }
+
+/* ===== Modality Accordion ===== */
+.mod-accordion { margin: 12px 0; }
+.mod-accordion-header {
+  padding: 12px 16px; background: var(--bg); cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+  transition: background 0.15s;
+}
+.mod-accordion-header:hover { background: var(--border); }
+.mod-accordion-body { display: none; padding: 12px 16px; border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.mod-accordion.open .mod-accordion-body { display: block; }
+.mod-accordion.open .mod-accordion-header { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+
 /* ===== Print ===== */
 @media print {
-  .navbar, .nav-right, .btn, .bookmark-btn, .theme-btn, .disclaimer, .kb-sidebar, .sub-tabs, .checklist-phase-tabs { display: none !important; }
+  .navbar, .nav-right, .btn, .bookmark-btn, .theme-btn, .disclaimer, .kb-sidebar, .sub-tabs, .checklist-phase-tabs, .modality-bar, .mod-btn, .level-toggle { display: none !important; }
   body { padding-top: 0; background: #fff; }
   .tool-panel:not(.active) { display: none !important; }
   .tool-grid { grid-template-columns: 1fr; }
@@ -368,23 +437,38 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 
 <!-- ===== Navigation ===== -->
 <nav class="navbar">
-  <div class="navbar-brand">CRRT 临床助手</div>
+  <div class="navbar-brand">血液净化 临床助手</div>
   <div class="nav-tabs">
-    <button class="nav-tab active" data-tab="calculator">处方计算</button>
+    <button class="nav-tab active" data-tab="decision">决策路径</button>
+    <button class="nav-tab" data-tab="calculator">CRRT处方</button>
     <button class="nav-tab" data-tab="anticoag">抗凝调整</button>
     <button class="nav-tab" data-tab="knowledge">知识库</button>
     <button class="nav-tab" data-tab="checklist">核查表</button>
     <button class="nav-tab" data-tab="workflow">工作流</button>
   </div>
   <div class="nav-right">
+    <button class="level-toggle" id="levelToggle" title="切换初级/高级模式">初级</button>
     <button class="theme-btn" id="themeToggle" title="切换深色/浅色模式">🌙</button>
   </div>
 </nav>
 
 <div class="container">
 
+<!-- ===== Tool 0: Clinical Decision Pathway ===== -->
+<section class="tool-panel active" id="panel-decision">
+  <h2>临床决策路径</h2>
+  <p style="color:var(--text-secondary);margin-bottom:20px">根据患者病情，选择最合适的血液净化模式</p>
+  <div id="decisionWizard"></div>
+</section>
+
 <!-- ===== Tool 1: CRRT Prescription Calculator ===== -->
-<section class="tool-panel active" id="panel-calculator">
+<section class="tool-panel" id="panel-calculator">
+  <div class="modality-bar" id="modBar-calculator">
+    <button class="mod-btn active" data-mod="CRRT">CRRT</button>
+    <button class="mod-btn" data-mod="DPMAS">DPMAS 参数</button>
+    <button class="mod-btn" data-mod="PE">PE 计算</button>
+    <button class="mod-btn" data-mod="HP">HP 参数</button>
+  </div>
   <div class="tool-header">
     <h2>CRRT 处方计算器</h2>
     <button class="btn btn-outline btn-sm" id="calcReset">重置</button>
@@ -471,10 +555,50 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
       </div>
     </div>
   </div>
+
+  <!-- PE Calculator (hidden by default) -->
+  <div id="pe-calc-section" style="display:none;">
+    <div class="tool-grid">
+      <div>
+        <div class="card">
+          <h3>患者参数</h3>
+          <div class="form-row">
+            <div class="form-group"><label>体重 <span class="unit">kg</span></label><input type="number" id="peWeight" value="70" min="30" max="200" step="0.1"></div>
+            <div class="form-group"><label>Hct <span class="unit">%</span></label><input type="number" id="peHct" value="30" min="15" max="60" step="1"></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>置换方案</h3>
+          <div class="form-group"><label>交换倍数</label><input type="range" id="peFactor" min="1.0" max="1.5" step="0.05" value="1.2"><div class="range-labels"><span>1.0×PV</span><span>1.5×PV</span></div></div>
+          <div class="form-group"><label>FFP比例</label><input type="range" id="peFFPRatio" min="0" max="100" step="5" value="70"><div class="range-labels"><span>0% (全白蛋白)</span><span>100% (全FFP)</span></div></div>
+          <div class="form-group"><label>治疗次数</label><input type="number" id="peSessions" value="5" min="1" max="30" step="1"></div>
+          <div class="form-group"><label>频率</label><select id="peFreq"><option value="24">每日 (q24h)</option><option value="48" selected>隔日 (q48h)</option><option value="72">每3天 (q72h)</option></select></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>计算结果</h3>
+          <div id="peResults"></div>
+        </div>
+        <div id="peAlerts"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DPMAS / HP Parameter Reference (hidden by default) -->
+  <div id="non-crrt-params" style="display:none;">
+    <div class="card" id="paramCardContent"></div>
+  </div>
 </section>
 
 <!-- ===== Tool 2: Anticoagulation Dosing ===== -->
 <section class="tool-panel" id="panel-anticoag">
+  <div class="modality-bar" id="modBar-anticoag">
+    <button class="mod-btn active" data-mod="CRRT">CRRT 抗凝</button>
+    <button class="mod-btn" data-mod="DPMAS">DPMAS</button>
+    <button class="mod-btn" data-mod="PE">PE 抗凝</button>
+    <button class="mod-btn" data-mod="HP">HP</button>
+  </div>
   <div class="tool-header">
     <h2>抗凝方案调整</h2>
     <button class="btn btn-outline btn-sm" id="acReset">重置</button>
@@ -624,6 +748,12 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 
 <!-- ===== Tool 4: CRRT Checklist ===== -->
 <section class="tool-panel" id="panel-checklist">
+  <div class="modality-bar" id="modBar-checklist">
+    <button class="mod-btn active" data-mod="CRRT">CRRT</button>
+    <button class="mod-btn" data-mod="DPMAS">DPMAS</button>
+    <button class="mod-btn" data-mod="PE">PE</button>
+    <button class="mod-btn" data-mod="HP">HP</button>
+  </div>
   <div class="tool-header">
     <h2>CRRT 核查表</h2>
     <button class="btn btn-outline btn-sm" id="clReset">重置当前阶段</button>
@@ -635,6 +765,12 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 
 <!-- ===== Tool 5: CRRT Workflow ===== -->
 <section class="tool-panel" id="panel-workflow">
+  <div class="modality-bar" id="modBar-workflow">
+    <button class="mod-btn active" data-mod="CRRT">CRRT</button>
+    <button class="mod-btn" data-mod="DPMAS">DPMAS</button>
+    <button class="mod-btn" data-mod="PE">PE</button>
+    <button class="mod-btn" data-mod="HP">HP</button>
+  </div>
   <div class="tool-header">
     <h2>CRRT 决策到撤机全流程</h2>
     <button class="btn btn-outline btn-sm" id="wfReset">重新开始</button>
@@ -673,7 +809,7 @@ input[type="range"] { width: 100%; accent-color: var(--primary); }
 <!-- ===== Disclaimer ===== -->
 <div class="disclaimer">
   <p>本工具仅供教育辅助和临床参考，不构成医疗建议。所有治疗决策应结合患者具体情况、当地指南和临床判断。</p>
-  <p>CRRT Clinical Assistant v1.0 | 离线可用 | 数据仅保存在本地浏览器</p>
+  <p>血液净化 Clinical Assistant v2.0 | 离线可用 | 数据仅保存在本地浏览器</p>
 </div>
 
 </div><!-- /container -->
@@ -691,6 +827,44 @@ function saveState(partial) {
   localStorage.setItem(LS_KEY, JSON.stringify(s));
 }
 
+// ===== Modality & Level =====
+const appState = { currentModality: 'CRRT', level: 'basic', activeTab: 'decision', theme: 'light' };
+function switchModality(mod, source) {
+  appState.currentModality = mod;
+  saveState({ currentModality: mod });
+  // Update all modality bars
+  document.querySelectorAll('.modality-bar').forEach(bar => {
+    bar.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('active'));
+    const activeBtn = bar.querySelector(`.mod-btn[data-mod="${mod}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+  });
+  // Trigger panel-specific re-render
+  if (source === 'calculator') renderCalculatorByModality();
+  if (source === 'anticoag') renderAnticoagByModality();
+  if (source === 'checklist') { clModality = mod; renderChecklist(); }
+  if (source === 'workflow') { wfState.modality = mod; wfState.step = 1; renderWorkflowStep(); }
+}
+document.querySelectorAll('.mod-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mod = btn.dataset.mod;
+    const barId = btn.closest('.modality-bar').id;
+    const source = barId.replace('modBar-', '');
+    switchModality(mod, source);
+  });
+});
+
+function setLevel(lvl) {
+  appState.level = lvl;
+  document.body.setAttribute('data-level', lvl);
+  const btn = document.getElementById('levelToggle');
+  if (btn) {
+    btn.textContent = lvl === 'advanced' ? '高级' : '初级';
+    if (lvl === 'advanced') btn.classList.add('advanced');
+    else btn.classList.remove('advanced');
+  }
+  saveState({ level: lvl });
+}
+
 // ===== Navigation =====
 function switchTab(tabId) {
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -698,6 +872,9 @@ function switchTab(tabId) {
   document.querySelector(`.nav-tab[data-tab="${tabId}"]`).classList.add('active');
   document.getElementById(`panel-${tabId}`).classList.add('active');
   saveState({ activeTab: tabId });
+  if (tabId === 'decision') renderDecisionWizard();
+  if (tabId === 'checklist') renderChecklist();
+  if (tabId === 'workflow') renderWorkflowStep();
 }
 document.querySelectorAll('.nav-tab').forEach(tab => {
   tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -713,6 +890,434 @@ function setTheme(dark) {
 themeBtn.addEventListener('click', () => {
   setTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
 });
+
+// ===== PE Calculator =====
+function calcPE() {
+  const wt = parseFloat(document.getElementById('peWeight').value) || 70;
+  const hct = parseFloat(document.getElementById('peHct').value) || 30;
+  const factor = parseFloat(document.getElementById('peFactor').value) || 1.2;
+  const ffpRatio = parseInt(document.getElementById('peFFPRatio').value) / 100;
+  const sessions = parseInt(document.getElementById('peSessions').value) || 5;
+  const freq = parseInt(document.getElementById('peFreq').value) || 48;
+
+  const pv = 0.065 * wt * (1 - hct / 100); // L
+  const pvMl = pv * 1000; // mL
+  const exchangeVol = pv * factor; // L
+  const ffpVol = exchangeVol * ffpRatio; // L
+  const albVol = exchangeVol * (1 - ffpRatio); // L
+  const ffpUnits = Math.ceil(ffpVol / 0.2); // 1 unit ≈ 200 mL
+  const totalExchange = exchangeVol * sessions;
+  const totalDays = (sessions - 1) * (freq / 24);
+  const citrateLoad = ffpVol * 0.14; // ~14% citrate in FFP
+  const caRec = Math.ceil(ffpUnits / 3); // 10mL 10% Ca-gluconate per 3 units FFP
+
+  return { pv, pvMl, exchangeVol, ffpVol, albVol, ffpUnits, sessions, totalExchange, totalDays, citrateLoad, caRec, ffpRatio, factor };
+}
+
+function renderPE() {
+  const r = calcPE();
+  const resultsEl = document.getElementById('peResults');
+  const alertsEl = document.getElementById('peAlerts');
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = `
+    <div class="result-row"><span class="result-label">预估血浆容量 (PV)</span><span class="result-value" style="font-size:1.4rem">${r.pv.toFixed(2)} L</span></div>
+    <div class="result-row"><span class="result-label">单次置换量 (${r.factor}×PV)</span><span class="result-value" style="font-size:1.4rem">${r.exchangeVol.toFixed(2)} L</span></div>
+    <div class="result-row"><span class="result-label">FFP 需求 / 次</span><span><strong>${r.ffpUnits} 单位</strong> (${r.ffpVol.toFixed(2)} L)</span></div>
+    <div class="result-row"><span class="result-label">5% 白蛋白 / 次</span><span>${r.albVol.toFixed(2)} L</span></div>
+    <div class="result-row"><span class="result-label">疗程总量 (${r.sessions}次)</span><span><strong>${r.totalExchange.toFixed(1)} L</strong></span></div>
+    <div class="result-row"><span class="result-label">预计疗程时间</span><span>约 ${r.totalDays.toFixed(0)} 天</span></div>
+  `;
+
+  let alerts = '';
+  if (r.ffpRatio > 0) {
+    alerts += `<div class="alert alert-warn"><strong>FFP枸橼酸负荷：</strong>约 ${r.citrateLoad.toFixed(1)}% 来自FFP。每3单位FFP需补充10%葡萄糖酸钙10mL(iv)以预防低钙血症。建议q1h监测iCa。</div>`;
+  }
+  if (r.ffpRatio > 0.5) {
+    alerts += `<div class="alert alert-warn"><strong>FFP过敏预防：</strong>置换前给予抗组胺药(苯海拉明25-50mg)。备好肾上腺素和氢化可的松。</div>`;
+  }
+  alerts += `<div class="alert alert-safe"><strong>置换液温度：</strong>使用血液加温器将置换液加热至37°C，预防低体温。</div>`;
+  alerts += `<div class="alert alert-safe"><strong>监测提醒：</strong>置换前后查凝血功能(PT/aPTT/Fib)、血小板、iCa。每次置换后评估临床反应。</div>`;
+  alertsEl.innerHTML = alerts;
+}
+
+function renderParamCard(mod) {
+  const content = document.getElementById('paramCardContent');
+  if (!content) return;
+  if (mod === 'DPMAS') {
+    content.innerHTML = `<h3>DPMAS 参数速查表</h3>
+    <table class="param-ref-table"><tbody>
+      <tr><td>血流速 (Qb)</td><td>100 - 150 mL/min</td></tr>
+      <tr><td>血浆分离比例</td><td>15 - 20%</td></tr>
+      <tr><td>血浆流速</td><td>15 - 30 mL/min</td></tr>
+      <tr><td>单次时长</td><td>2 - 4 小时</td></tr>
+      <tr><td>吸附柱</td><td>HA330-II (树脂) + BS330 (离子交换)</td></tr>
+      <tr><td>疗程</td><td>3 - 5 次</td></tr>
+      <tr><td>抗凝</td><td>肝素, ACT 180-220s 或 aPTT 1.5-2.0×正常</td></tr>
+      <tr><td>胆红素目标</td><td>单次降幅 > 30%</td></tr>
+      <tr><td>血管通路</td><td>双腔透析导管 (同CRRT)</td></tr>
+      <tr><td>禁忌</td><td>INR>3、活动性出血、严重血流动力学不稳定</td></tr>
+    </tbody></table>
+    <p style="margin-top:12px;color:var(--text-secondary);font-size:0.85rem">DPMAS不依赖血浆，避免输血相关风险。但与PE相比，不补充凝血因子——肝衰竭伴凝血障碍者需权衡。</p>`;
+  } else if (mod === 'HP') {
+    content.innerHTML = `<h3>HP 血液灌流 参数速查表</h3>
+    <table class="param-ref-table"><tbody>
+      <tr><td>血流速 (Qb)</td><td>150 - 200 mL/min</td></tr>
+      <tr><td>单次时长</td><td>2 - 3 小时 (灌流器饱和)</td></tr>
+      <tr><td>灌流器更换</td><td>每 2-3h, 每次最多 2-3 个灌流器</td></tr>
+      <tr><td>活性炭 (HA230)</td><td>广谱毒素吸附，适用于大部分中毒</td></tr>
+      <tr><td>树脂 (HA330/HA380)</td><td>炎症介质、细胞因子吸附</td></tr>
+      <tr><td>抗凝</td><td>肝素 2000-3000U 首剂 + 1000-1500U/h 维持</td></tr>
+      <tr><td>ACT 目标</td><td>180 - 220s (比CRRT剂量高，灌流器吸附肝素)</td></tr>
+      <tr><td>血管通路</td><td>双腔透析导管 (同CRRT)</td></tr>
+      <tr><td>禁忌</td><td>严重血小板减少(<50k)、活动性出血、血流动力学不稳定</td></tr>
+      <tr><td>联合HD</td><td>HP + HD可串联使用 (灌流器在前，透析器在后)</td></tr>
+    </tbody></table>
+    <p style="margin-top:12px;color:var(--text-secondary);font-size:0.85rem">HP不纠正电解质紊乱和酸中毒——需关注基础支持治疗。血小板降低是常见并发症，每2h监测一次。</p>`;
+  }
+}
+
+function renderCalculatorByModality() {
+  const mod = appState.currentModality;
+  const crrtContent = document.querySelector('#panel-calculator .tool-grid');
+  const header = document.querySelector('#panel-calculator .tool-header h2');
+  const peSection = document.getElementById('pe-calc-section');
+  const paramSection = document.getElementById('non-crrt-params');
+  const toolHeaderDiv = document.querySelector('#panel-calculator .tool-header');
+
+  // Hide all first
+  if (crrtContent) crrtContent.style.display = 'none';
+  if (peSection) peSection.style.display = 'none';
+  if (paramSection) paramSection.style.display = 'none';
+
+  if (mod === 'CRRT') {
+    if (crrtContent) crrtContent.style.display = '';
+    if (header) header.textContent = 'CRRT 处方计算器';
+    // Show reset button
+    const resetBtn = document.getElementById('calcReset');
+    if (resetBtn) resetBtn.style.display = '';
+  } else if (mod === 'PE') {
+    if (peSection) { peSection.style.display = ''; renderPE(); }
+    if (header) header.textContent = 'PE 血浆置换计算器';
+    const resetBtn = document.getElementById('calcReset');
+    if (resetBtn) resetBtn.style.display = 'none';
+  } else if (mod === 'DPMAS' || mod === 'HP') {
+    if (paramSection) { paramSection.style.display = ''; renderParamCard(mod); }
+    if (header) header.textContent = mod + ' 参数速查';
+    const resetBtn = document.getElementById('calcReset');
+    if (resetBtn) resetBtn.style.display = 'none';
+  }
+}
+
+// PE Input listeners
+function bindPEEvents() {
+  ['peWeight','peHct','peFactor','peFFPRatio','peSessions','peFreq'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', renderPE);
+      el.addEventListener('change', renderPE);
+    }
+  });
+}
+
+function renderAnticoagByModality() {
+  // Show/hide anticoag content based on modality
+  const mod = appState.currentModality;
+  const citratePanel = document.getElementById('acCitratePanel');
+  const heparinPanel = document.getElementById('acHeparinPanel');
+
+  if (mod === 'CRRT') {
+    // Default behavior: show citrate + heparin sub-tabs
+    if (citratePanel) citratePanel.style.display = '';
+    if (heparinPanel) heparinPanel.style.display = 'none';
+    const acMode = loadState().acMode;
+    if (acMode === 'heparin') {
+      if (citratePanel) citratePanel.style.display = 'none';
+      if (heparinPanel) heparinPanel.style.display = '';
+    }
+  } else if (mod === 'DPMAS' || mod === 'HP') {
+    // Both use heparin-based protocols
+    if (citratePanel) citratePanel.style.display = 'none';
+    if (heparinPanel) heparinPanel.style.display = '';
+    document.querySelectorAll('#panel-anticoag .sub-tab').forEach(t => t.classList.remove('active'));
+    const hepTab = document.querySelector('#panel-anticoag .sub-tab[data-sub="heparin"]');
+    if (hepTab) hepTab.classList.add('active');
+  } else if (mod === 'PE') {
+    // PE-specific info
+    if (citratePanel) citratePanel.style.display = 'none';
+    if (heparinPanel) heparinPanel.style.display = '';
+    document.querySelectorAll('#panel-anticoag .sub-tab').forEach(t => t.classList.remove('active'));
+    const hepTab = document.querySelector('#panel-anticoag .sub-tab[data-sub="heparin"]');
+    if (hepTab) hepTab.classList.add('active');
+  }
+}
+// ===== Decision Pathway =====
+const dState = { step: 1, answers: {}, recommendation: null };
+
+const decisionTree = {
+  steps: [
+    {
+      id: 'organ',
+      title: 'Step 1：确定主要受累器官/系统',
+      question: '以下哪个是患者当前最主要的临床问题？',
+      type: 'single',
+      options: [
+        { id: 'kidney', label: '肾脏', desc: 'AKI、液体过负荷、电解质紊乱、代谢性酸中毒', icon: '🫘' },
+        { id: 'liver', label: '肝脏', desc: '肝衰竭、高胆红素血症、肝性脑病、胆汁淤积', icon: '🫁' },
+        { id: 'autoimmune', label: '自身免疫', desc: '自身抗体介导疾病（TTP、GBS、重症肌无力、AAV、Goodpasture等）', icon: '🛡️' },
+        { id: 'toxin', label: '中毒', desc: '药物或毒物中毒（高蛋白结合、大分布容积、无特效解毒剂）', icon: '☠️' },
+        { id: 'multi', label: '多器官/全身', desc: '脓毒症合并MODS、全身炎症反应综合征、多因素叠加', icon: '🏥' }
+      ]
+    },
+    // Kidney branch
+    { id: 'kidney_q', parent: 'kidney', title: 'Step 2：肾脏问题细化', question: '请评估以下临床特征：', type: 'multi',
+      options: [
+        { id: 'kidney_unstable', label: '血流动力学不稳定', desc: '需要血管活性药物支持、MAP < 65 mmHg' },
+        { id: 'kidney_fluid', label: '持续性液体过负荷', desc: '利尿剂抵抗、需要大量液体清除' },
+        { id: 'kidney_icp', label: '颅内压升高/脑水肿风险', desc: '如肝衰竭合并脑病、颅脑外伤' },
+        { id: 'kidney_lytes', label: '严重电解质/酸碱紊乱', desc: 'K⁺ > 6.5、pH < 7.15、快速进展' }
+      ],
+      hint: '可多选，至少选一项' },
+    // Liver branch
+    { id: 'liver_q', parent: 'liver', title: 'Step 2：肝脏问题细化', question: '以下哪些特征适用？', type: 'multi',
+      options: [
+        { id: 'liver_bili', label: '重度高胆红素血症', desc: 'TBil > 200 μmol/L，药物效果不佳' },
+        { id: 'liver_aki', label: '合并肾损伤(AKI)', desc: 'Scr升高、少尿 — 肝肾综合征可能' },
+        { id: 'liver_enceph', label: '肝性脑病', desc: '意识障碍、血氨升高、对乳果糖反应不佳' },
+        { id: 'liver_coag', label: '严重凝血功能障碍', desc: 'INR显著延长、活动性出血风险' }
+      ],
+      hint: '可多选，至少选一项' },
+    // Autoimmune branch
+    { id: 'autoimmune_q', parent: 'autoimmune', title: 'Step 2：自身免疫疾病细化', question: '疑似或确诊的疾病类型？', type: 'single',
+      options: [
+        { id: 'ai_ttp', label: 'TTP / TMA', desc: '血小板减少 + 微血管病性溶血 + 器官缺血' },
+        { id: 'ai_gbs', label: 'Guillain-Barré 综合征', desc: '急性对称性迟缓性瘫痪、呼吸肌受累' },
+        { id: 'ai_mg', label: '重症肌无力危象', desc: '肌无力急剧加重、呼吸衰竭' },
+        { id: 'ai_gn', label: '急进性肾小球肾炎', desc: '抗GBM病(G)、AAV(G)、狼疮肾炎' },
+        { id: 'ai_other', label: '其他自身免疫病', desc: '灾难性APS、严重SLE、CIDP等' }
+      ] },
+    // Toxin branch
+    { id: 'toxin_q', parent: 'toxin', title: 'Step 2：中毒特征细化', question: '关于中毒物质和暴露情况：', type: 'multi',
+      options: [
+        { id: 'toxin_highpb', label: '高蛋白结合率药物', desc: '蛋白结合率 > 80%（如巴比妥类、三环类抗抑郁药）' },
+        { id: 'toxin_largevd', label: '大分布容积', desc: 'Vd > 1 L/kg — 血液透析清除效果差' },
+        { id: 'toxin_recent', label: '摄入时间 < 6 小时', desc: '早期清除窗口期仍有意义' },
+        { id: 'toxin_noantidote', label: '无特效解毒剂', desc: '如百草枯、鹅膏毒蕈（毒蘑菇）等' }
+      ],
+      hint: '可多选，至少选一项' },
+    // Multi-organ branch
+    { id: 'multi_q', parent: 'multi', title: 'Step 2：多器官衰竭细化', question: '主导问题是什么？', type: 'single',
+      options: [
+        { id: 'multi_sepsis', label: '脓毒症为主导', desc: '感染源明确、炎症指标升高、需要炎症介质清除' },
+        { id: 'multi_hepatorenal', label: '肝肾综合征', desc: '肝衰竭+肾衰竭联合、胆红素升高+少尿' },
+        { id: 'multi_cardiorenal', label: '心肾综合征', desc: '心衰+肾衰、液体过负荷为核心' }
+      ] }
+  ],
+  evaluate() {
+    const a = dState.answers;
+    const organ = a.organ;
+
+    // Kidney branch
+    if (organ === 'kidney') {
+      if (a.kidney_icp || a.kidney_unstable) {
+        return { modality: 'CRRT', strength: 'strong', mode: 'CVVHDF', title: 'CRRT（首选CVVHDF）',
+          reason: '血流动力学不稳定或颅内压升高患者，持续治疗优于间歇血液透析，可更好保护脑灌注和维持血流动力学稳定。',
+          params: '剂量 ≥ 20-25 mL/kg/h, Qb 100-200 mL/min, RCA抗凝首选',
+          contraindications: '无绝对禁忌。如患者可耐受IHD且资源有限，也可考虑SLED。' };
+      }
+      if (a.kidney_lytes) {
+        return { modality: 'CRRT / IHD', strength: 'strong', mode: 'IHD优先(高钾)', title: '严重电解质紊乱 → IHD或CRRT',
+          reason: '严重高钾血症伴ECG改变时，IHD每分钟钾清除效率远高于CRRT。如无ECG改变血流动力学又不稳定，可选CRRT。',
+          params: 'IHD: Qb 250-300 mL/min, 2-3h; CRRT: 剂量 25-30 mL/kg/h',
+          contraindications: 'IHD不适合血流动力学不稳定者。' };
+      }
+      return { modality: 'CRRT', strength: 'strong', mode: 'CVVHD/CVVHDF', title: 'CRRT（CVVHD或CVVHDF）',
+        reason: '持续性液体过负荷伴AKI，CRRT可持续稳定地清除液体和溶质。',
+        params: 'FF < 20%, 剂量 20-25 mL/kg/h, Qb 200 mL/min',
+        contraindications: '需评估抗凝方案。颅内出血活动期考虑无抗凝策略。' };
+    }
+
+    // Liver branch
+    if (organ === 'liver') {
+      const needs = [];
+      if (a.liver_bili) needs.push('DPMAS');
+      if (a.liver_enceph || a.liver_coag) needs.push('PE');
+      if (a.liver_aki) needs.push('CRRT');
+      if (needs.includes('DPMAS') && needs.includes('CRRT')) {
+        return { modality: 'DPMAS + CRRT', strength: 'strong', mode: '联合治疗', title: 'DPMAS + CRRT 联合治疗',
+          reason: '肝肾综合征或肝衰竭合并AKI：DPMAS清除胆红素和炎症介质（不依赖血浆），CRRT管理容量和尿毒症毒素。两种模式可序贯或同时进行。',
+          params: 'DPMAS: Qb 100-150 mL/min, 2-4h/次; CRRT: 剂量 20-25 mL/kg/h, 持续24h',
+          contraindications: 'DPMAS禁忌：严重凝血功能障碍(INR>3)、活动性出血、血流动力学极度不稳定。PE禁忌：对FFP严重过敏史。' };
+      }
+      if (needs.includes('PE')) {
+        return { modality: 'PE', strength: 'strong', mode: 'TPE', title: '血浆置换(TPE)',
+          reason: '肝衰竭合并凝血功能障碍或肝性脑病：PE可补充凝血因子、清除蛋白结合毒素。如同时有高胆红素，可考虑PE+DPMAS序贯。',
+          params: '1.0-1.5×PV/次, 每日或隔日, FFP为主要置换液',
+          contraindications: '对FFP严重过敏、血流动力学极度不稳定。' };
+      }
+      return { modality: 'DPMAS', strength: 'strong', mode: '双重血浆分子吸附', title: 'DPMAS',
+        reason: '单纯高胆红素血症/肝衰竭：DPMAS无需血浆，避免输血风险，可有效降低胆红素和炎症因子。',
+        params: 'Qb 100-150 mL/min, 血浆分离比 15-20%, 2-4h/次, 3-5次/疗程',
+        contraindications: '严重凝血功能障碍(INR>3)慎用、血流动力学不稳定。' };
+    }
+
+    // Autoimmune branch
+    if (organ === 'autoimmune') {
+      return { modality: 'PE', strength: 'strong', mode: 'TPE', title: '血浆置换(TPE / PE)',
+        reason: '自身抗体介导疾病是PE的ASFA I类适应证。PE可快速清除致病性自身抗体和免疫复合物。PE不是根治性治疗——需联合免疫抑制治疗作为桥接。',
+        params: '1.0-1.5×PV/次, 每日或隔日, 5-7次为一疗程。TTP需每日置换直到血小板>150k×2天。GBS通常5次。FFP为TTP首选置换液。',
+        contraindications: '对FFP/白蛋白过敏。血流动力学不稳定时先用白蛋白(不用FFP)看反应。活动性出血需权衡。' };
+    }
+
+    // Toxin branch
+    if (organ === 'toxin') {
+      const hpIndicated = a.toxin_highpb || a.toxin_largevd;
+      if (hpIndicated && a.toxin_recent) {
+        return { modality: 'HP', strength: 'strong', mode: '血液灌流', title: '血液灌流(HP)',
+          reason: '高蛋白结合或大分布容积毒物——血液透析难以清除，而血液灌流活性炭/树脂可以有效吸附。摄入<6h为最佳清除窗口。',
+          params: 'Qb 150-200 mL/min, 2-3h/次/灌流器, 可能需要多个灌流器替换(每次2-3h达饱和)',
+          contraindications: '严重血小板减少(<50k)、活动性出血、血流动力学不稳定。灌流器也吸附血小板。' };
+      }
+      if (a.toxin_recent) {
+        return { modality: 'HP 或 支持治疗', strength: 'weak', mode: '个体化', title: 'HP可选 / 加强支持治疗',
+          reason: '低蛋白结合、小分布容积毒物可通过IHD/CRRT清除。如无毒物持续吸收且临床稳定，也可考虑加强支持治疗等待代谢清除。',
+          params: '如有特效解毒剂则优先使用。评估毒物水平动态变化。',
+          contraindications: '超过12h且临床稳定者获益小。' };
+      }
+      return { modality: '支持治疗为主', strength: 'weak', mode: '支持', title: '以支持治疗为主',
+        reason: '摄入>12h，毒物可能已分布/代谢，体外清除获益有限。重点维持生命体征、促进内源性清除。',
+        params: '如肾功能正常、尿液碱化/酸化等辅助措施可能有效。',
+        contraindications: '如临床恶化可重新评估HP指征。' };
+    }
+
+    // Multi-organ branch
+    if (organ === 'multi') {
+      if (a.multi_hepatorenal) {
+        return { modality: 'DPMAS + CRRT', strength: 'strong', mode: '联合治疗', title: 'DPMAS + CRRT 序贯/联合',
+          reason: '肝肾综合征：DPMAS处理胆红素和肝源性毒素，CRRT管理AKI和液体平衡。',
+          params: '可序贯：先DPMAS 2-4h → 接CRRT持续24h；或同日DPMAS早晨、CRRT全天。',
+          contraindications: '同DPMAS和CRRT各自禁忌。注意抗凝方案衔接。' };
+      }
+      if (a.multi_sepsis) {
+        return { modality: 'CRRT + HP(可选)', strength: 'weak', mode: 'CRRT ± HP', title: 'CRRT + 血液灌流（可选）',
+          reason: '脓毒症合并AKI首选CRRT。HP对炎症介质清除的证据有限且结论不一致——不作为常规推荐，可在临床试验或难治性休克中考虑。',
+          params: 'CRRT: CVVHDF模式, 剂量 25-30 mL/kg/h, RCA抗凝。HP: 树脂灌流器HA330/HA380, 2-3h/次。',
+          contraindications: 'HP在脓毒症中的证据级别低——与患者家属充分沟通。' };
+      }
+      return { modality: 'CRRT', strength: 'strong', mode: 'CVVHDF', title: 'CRRT（多器官支持）',
+        reason: '心肾综合征或其他多器官衰竭：CRRT可持续稳定地管理容量、电解质和酸碱平衡，同时为药物治疗提供空间。',
+        params: 'CVVHDF模式, 剂量 20-25 mL/kg/h, 净超滤根据血流动力学调整(1.0-1.75 mL/kg/h)',
+        contraindications: '需评估血管通路和抗凝方案。' };
+    }
+
+    return { modality: '请选择', strength: 'weak', title: '请完成评估步骤', reason: '请先完成前面的决策步骤。' };
+  }
+};
+
+function renderDecisionWizard() {
+  const container = document.getElementById('decisionWizard');
+  if (!container) return;
+  const s = dState;
+  const stepDef = decisionTree.steps.find(st => st.id === (s.step === 1 ? 'organ' : s.step === 2 ? (s.answers.organ + '_q') : null));
+
+  let html = '';
+  if (s.step <= 2) {
+    const currentStep = s.step === 1 ? decisionTree.steps[0] : decisionTree.steps.find(st => st.id === s.answers.organ + '_q');
+    if (!currentStep) { s.step = 1; renderDecisionWizard(); return; }
+    html += `<div class="card"><h3>${currentStep.title}</h3>`;
+    html += `<p style="margin-bottom:12px;color:var(--text-secondary)">${currentStep.question}</p>`;
+    html += `<div class="wf-choice-grid">`;
+    currentStep.options.forEach(opt => {
+      const sel = s.step === 1 ? s.answers.organ === opt.id : s.answers[currentStep.id] && s.answers[currentStep.id].includes(opt.id);
+      html += `<div class="wf-choice${sel ? ' selected' : ''}" data-opt="${opt.id}" data-step="${currentStep.id}">`;
+      html += `<div class="wf-choice-icon">${opt.icon || ''}</div>`;
+      html += `<div class="wf-choice-label">${opt.label}</div>`;
+      html += `<div class="wf-choice-desc">${opt.desc}</div>`;
+      html += `</div>`;
+    });
+    html += `</div>`;
+    if (currentStep.hint) {
+      html += `<p style="color:var(--text-secondary);font-size:0.85rem;margin-top:8px">${currentStep.hint}</p>`;
+    }
+    html += `<div class="wf-nav">`;
+    if (s.step > 1) html += `<button class="btn btn-outline" id="dwBack">← 上一步</button>`;
+    html += `<div style="flex:1"></div>`;
+    html += `<button class="btn btn-primary" id="dwNext" ${!s.answers.organ && s.step === 1 ? 'disabled' : ''}>下一步 →</button>`;
+    html += `</div>`;
+    html += `<div class="wf-progress" style="margin-top:16px">`;
+    html += `<span style="color:${s.step >= 1 ? 'var(--primary)' : 'var(--border)'}">● Step 1</span> `;
+    html += `<span style="color:${s.step >= 2 ? 'var(--primary)' : 'var(--border)'}">● Step 2</span> `;
+    html += `<span style="color:${s.step >= 3 ? 'var(--primary)' : 'var(--border)'}">● 推荐</span>`;
+    html += `</div></div>`;
+  } else {
+    // Step 3: Recommendation
+    const rec = decisionTree.evaluate();
+    dState.recommendation = rec;
+    const mod = rec.modality.includes('CRRT') ? 'crrt' : rec.modality.includes('DPMAS') ? 'dpmas' : rec.modality.includes('PE') ? 'pe' : rec.modality.includes('HP') ? 'hp' : '';
+    html += `<div class="card"><h3>Step 3：推荐方案</h3>`;
+    html += `<div class="decision-card ${mod}">`;
+    html += `<h4>${rec.title}</h4>`;
+    const badge = rec.strength === 'strong' ? '<span class="badge badge-strong">强推荐</span>' : '<span class="badge badge-weak">弱推荐</span>';
+    html += `<p>${badge} 推荐模式：<strong>${rec.modality}</strong>${rec.mode ? ' ('+rec.mode+')' : ''}</p>`;
+    html += `<p style="margin-top:8px"><strong>理由：</strong>${rec.reason}</p>`;
+    if (rec.params) html += `<p style="margin-top:8px"><strong>关键参数：</strong>${rec.params}</p>`;
+    if (rec.contraindications) html += `<p style="margin-top:8px"><strong>注意事项：</strong>${rec.contraindications}</p>`;
+    html += `</div>`;
+    html += `<div class="wf-nav" style="margin-top:16px">`;
+    html += `<button class="btn btn-outline" id="dwBack">← 上一步</button>`;
+    html += `<div style="flex:1"></div>`;
+    html += `<button class="btn btn-outline" id="dwRestart">↺ 重新开始</button>`;
+    html += `</div>`;
+    html += `<div class="wf-progress" style="margin-top:16px">`;
+    html += `<span style="color:var(--accent-green)">● Step 1</span> `;
+    html += `<span style="color:var(--accent-green)">● Step 2</span> `;
+    html += `<span style="color:var(--primary)">● 推荐</span>`;
+    html += `</div></div>`;
+  }
+
+  container.innerHTML = html;
+
+  // Event listeners
+  document.querySelectorAll('#decisionWizard .wf-choice').forEach(el => {
+    el.addEventListener('click', () => {
+      const stepId = el.dataset.step;
+      const optId = el.dataset.opt;
+      if (stepId === 'organ') {
+        dState.answers.organ = optId;
+        dState.answers[optId + '_q'] = [];
+      } else {
+        const current = dState.answers[stepId] || [];
+        const idx = current.indexOf(optId);
+        if (idx >= 0) current.splice(idx, 1);
+        else current.push(optId);
+        dState.answers[stepId] = current;
+      }
+      renderDecisionWizard();
+    });
+  });
+  const dwNext = document.getElementById('dwNext');
+  if (dwNext) {
+    dwNext.addEventListener('click', () => {
+      if (s.step === 1) dState.step = 2;
+      else if (s.step === 2) dState.step = 3;
+      renderDecisionWizard();
+    });
+  }
+  const dwBack = document.getElementById('dwBack');
+  if (dwBack) {
+    dwBack.addEventListener('click', () => {
+      dState.step = Math.max(1, s.step - 1);
+      renderDecisionWizard();
+    });
+  }
+  const dwRestart = document.getElementById('dwRestart');
+  if (dwRestart) {
+    dwRestart.addEventListener('click', () => {
+      dState.step = 1; dState.answers = {}; dState.recommendation = null;
+      renderDecisionWizard();
+    });
+  }
+}
 
 // ===== Tool 1: Prescription Calculator =====
 const calcInputs = ['calcWeight','calcHct','calcMode','calcDose','calcHdfRatio','calcPreDilution','calcNetUF','calcQb'];
@@ -1003,7 +1608,7 @@ document.getElementById('acReset').addEventListener('click', () => {
 // ===== Tool 3: Knowledge Base =====
 const kbData = [
   // ===== CRRT 基本原理 (4) =====
-  { id:'diff-conv', cat:'principles', title:'弥散与对流',
+  { id:'diff-conv', cat:'crrt-principles', title:'弥散与对流',
     content:`<p><strong>弥散 (Diffusion)</strong>：溶质顺浓度梯度跨半透膜运动，小分子（尿素、肌酐、电解质）清除效率高。主要用于<strong>CVVHD</strong>。</p>
     <p><strong>对流 (Convection)</strong>（溶剂拖曳）：溶质随水分子在静水压梯度下跨膜运动，中分子（500-50,000 Da，包括细胞因子）对流清除更优。主要用于<strong>CVVH</strong>。</p>
     <table><tr><th>特性</th><th>弥散 (CVVHD)</th><th>对流 (CVVH)</th></tr>
@@ -1014,14 +1619,14 @@ const kbData = [
     <tr><td>抗凝需求</td><td>较低</td><td>较高(FF依赖)</td></tr></table>
     <p><strong>CVVHDF</strong>结合两种机制。UpToDate推荐CVVHD或CVVHDF而非纯CVVH，因为弥散模式在维持较低FF的同时可提供更高KRT剂量。</p>`,
     pearl:'UpToDate推荐CVVHD或CVVHDF而非纯CVVH——纯对流模式FF更高、滤器凝血风险更大。弥散模式下溶质清除独立于超滤率，可在低超滤率下维持足够溶质清除。', refs:['KDIGO 2012','Ronco C et al. Lancet 2000'] },
-  { id:'membranes', cat:'principles', title:'CRRT 滤器膜材料',
+  { id:'membranes', cat:'crrt-principles', title:'CRRT 滤器膜材料',
     content:`<p>现代CRRT使用<strong>高通量合成膜</strong>：</p>
     <ul><li><strong>聚砜 (Polysulfone/PES/PAES)</strong>：最常用，生物相容性好，不带电荷</li>
     <li><strong>聚丙烯腈 (PAN/AN69)</strong>：负电荷膜，对中分子吸附能力强。但可致缓激肽释放——<strong>未处理的AN69膜禁用于使用ACEi的患者</strong>（可致过敏性休克）。AN69表面处理膜(AN69 ST, PEI涂层)可安全用于ACEi患者，但美国不可用</li>
     <li><strong>PMMA</strong>：兼具吸附和滤过功能</li></ul>
     <p>膜面积1.0-2.2 m²，截留分子量30-60 kDa。目前无证据表明某种膜材料改善临床结局。AN69膜清除中分子理论上有优势，但未转化为结局差异。</p>`,
     pearl:'AN69膜（未处理）禁用于ACEi患者——可致过敏性休克。换用AN69 ST处理膜或聚砜膜可安全使用。', refs:['Macedo E, Mehta RL. Am J Kidney Dis 2016'] },
-  { id:'ckrt-vs-ihd', cat:'principles', title:'CKRT vs 间歇性血液透析 (IHD)',
+  { id:'ckrt-vs-ihd', cat:'crrt-principles', title:'CKRT vs 间歇性血液透析 (IHD)',
     content:`<p><strong>CKRT首选场景：</strong></p><ul>
     <li>血流动力学不稳定（需血管活性药）</li><li>颅内压升高/脑水肿/暴发性肝衰竭（CKRT更好保护脑灌注）</li><li>需持续大量输液（TPN、多种静脉药）</li><li>烧伤（持续皮肤液体丢失）</li></ul>
     <p><strong>IHD首选场景：</strong></p><ul>
@@ -1029,7 +1634,7 @@ const kbData = [
     <p><strong>关键证据：</strong>多项RCT和meta分析显示，CKRT vs IHD在生存率、肾功能恢复上无差异（HemoDiaFe研究、CONVINT研究）。KDIGO建议两者互补使用。</p>
     <p>CKRT理论上血流动力学更稳定（缓慢持续清除），但RCT未证实低血压更少。CKRT 48小时内净溶质清除量高于IHD。</p>`,
     pearl:'血流动力学不稳定 = CKRT；严重高钾 = IHD；两者生存率无差异——根据临床场景和设备条件选择。', refs:['Vinsonneau C et al. Lancet 2006','Schefold JC et al. Crit Care 2014','KDIGO 2012'] },
-  { id:'indications-timing', cat:'principles', title:'CRRT启动时机与适应证',
+  { id:'indications-timing', cat:'crrt-principles', title:'CRRT启动时机与适应证',
     content:`<p><strong>紧急适应证（必须立即启动）：</strong></p><ul>
     <li>利尿剂难治的液体过负荷</li><li>严重高钾血症 (K+>6.5 mmol/L)</li><li>尿毒症表现（心包炎、脑病）</li><li>严重代酸 (pH<7.1) 尽管药物治疗</li><li>可透析药物/毒素中毒</li></ul>
     <p><strong>择期启动（灰区）：</strong> K+>6.0 药物无效，或>5.5 且持续组织分解/钾吸收；pH<7.15 无逆原因；少尿+持续正平衡</p>
@@ -1038,7 +1643,7 @@ const kbData = [
     pearl:'无紧急适应证时可以安全等待。BUN不作为启动决策依据，不使用固定时间阈值。早期"预防性"启动有害——增加透析依赖和不良事件。', refs:['STARRT-AKI. NEJM 2020','AKIKI. NEJM 2016','KDIGO 2012'] },
 
   // ===== 血管通路 (1) =====
-  { id:'vascular-access', cat:'vascular', title:'血管通路要点',
+  { id:'vascular-access', cat:'crrt-vascular', title:'血管通路要点',
     content:`<p><strong>导管：</strong>双腔透析导管，11-14 Fr，长度15-24 cm（股静脉≥24 cm）。部分中心使用三腔导管，但第三腔减小透析腔内径，可能限制血流。</p>
     <p><strong>穿刺部位优先级：</strong></p><ol>
     <li><strong>右颈内静脉 (RIJ)</strong>：首选，路径直，狭窄率低</li>
@@ -1049,7 +1654,7 @@ const kbData = [
     <p><strong>三腔导管注意事项：</strong>第三腔在CKRT期间不应用于救命药物（抗生素等）。枸橼酸抗凝时第三腔不输注钙剂（与循环、钙值不准确、RCA效果差相关）。</p>
     <p><strong>ESKD患者：</strong>避免使用AVF/AVG（针刺脱落出血风险），除非无其他通路。</p>`,
     pearl:'右IJ首选，股静脉≥24cm导管。锁骨下尽量避免（狭窄率最高）。三腔导管第三腔不输抗菌药、RCA时也不输钙。' },
-  { id:'blood-flow', cat:'vascular', title:'血流速 (Qb) 选择',
+  { id:'blood-flow', cat:'crrt-vascular', title:'血流速 (Qb) 选择',
     content:`<p><strong>不同场景推荐Qb：</strong></p><ul>
     <li>全身抗凝：200 mL/min</li><li>RCA：<200 mL/min（常100-150，更高血流需更多枸橼酸→增加枸橼酸负荷和费用）</li><li>无抗凝：250-300 mL/min</li></ul>
     <p><strong>Qb与模式的关系：</strong></p><ul>
@@ -1061,7 +1666,7 @@ const kbData = [
     pearl:'RCA时Qb<200（减少枸橼酸负荷），无抗凝时Qb 250-300（减少凝血）。Qb不影响血流动力学。', refs:['UpToDate: Prescription of CKRT in AKI in Adults 2026'] },
 
   // ===== 抗凝 (6) =====
-  { id:'anticoag-strategy', cat:'anticoag', title:'抗凝总策略',
+  { id:'anticoag-strategy', cat:'crrt-anticoag', title:'抗凝总策略',
     content:`<p><strong>UpToDate推荐路径：</strong></p><ol>
     <li>先尝试<strong>无抗凝</strong>CRRT——如果血管通路良好，通常可维持滤器寿命>24h</li>
     <li>如果反复凝血（滤器寿命<24h）且非通路问题→启动抗凝</li>
@@ -1076,7 +1681,7 @@ const kbData = [
     <li>避免置换液过热</li>
     <li>搬动时避免管路扭折</li></ul>`,
     pearl:'先无抗凝→能维持24h就继续；反复凝血→RCA首选→肝素备选。FF<20%、前稀释、避免管路扭折是无抗凝的三大要诀。', refs:['Davenport A. UpToDate 2026','KDIGO 2012'] },
-  { id:'rca-principles', cat:'anticoag', title:'枸橼酸抗凝 (RCA) 原理与方案',
+  { id:'rca-principles', cat:'crrt-anticoag', title:'枸橼酸抗凝 (RCA) 原理与方案',
     content:`<p><strong>原理：</strong>枸橼酸螯合血中离子钙→体外iCa<0.4 mmol/L→抑制凝血级联。枸橼酸-钙复合物经滤器清除，静脉端补钙维持正常全身iCa。</p>
     <p><strong>标准起始方案 (CVVHD, 4%枸橼酸钠)：</strong></p>
     <table><tr><th>体重 (kg)</th><th>Qb (mL/min)</th><th>透析液 (mL/h)</th><th>4%枸橼酸 (mL/h)</th><th>钙剂* (mL/h)</th></tr>
@@ -1087,7 +1692,7 @@ const kbData = [
     <p><strong>滤器后iCa目标：</strong>0.3-0.4 mmol/L（对应血枸橼酸浓度4-6 mmol/L）。<strong>全身iCa目标：</strong>正常范围。</p>
     <p><strong>透析液/置换液调整：</strong>RCA时使用低碳酸氢盐液(22-25 mEq/L)防碱中毒（枸橼酸代谢产生碳酸氢盐）。用低钠液(130 mEq/L)防高钠（枸橼酸液含钠）。优先使用无钙液。使用0.75 mmol/L镁液（枸橼酸也结合镁）。</p>`,
     pearl:'RCA起始方案按体重三档：<60/60-90/>90kg。滤器后iCa目标0.3-0.4。用低HCO3-液(22-25)防碱中毒。', refs:['Morgera S et al. Crit Care Med 2009','UpToDate 2026'] },
-  { id:'rca-monitoring', cat:'anticoag', title:'RCA 监测与枸橼酸蓄积',
+  { id:'rca-monitoring', cat:'crrt-anticoag', title:'RCA 监测与枸橼酸蓄积',
     content:`<p><strong>监测频率：</strong></p><ul>
     <li>电解质+血气：q6h（稳定48-72h后可延至q12h）</li><li>滤器后iCa：q6h滴定枸橼酸（若枸橼酸剂量固定于Qb，可减少监测频率）</li><li>全身iCa：q6h滴定钙补充</li><li>总钙/离子钙比值：每日一次</li></ul>
     <p><strong>枸橼酸蓄积四联征：</strong></p><ol>
@@ -1095,14 +1700,14 @@ const kbData = [
     <p><strong>蓄积处理：</strong>全部四项满足→停RCA。部分满足→先尝试减枸橼酸流速（CVVH时）或增透析液流速（CVVHD/CVVHDF时）。钙输注>90 mL/h也应考虑停止。</p>
     <p><strong>RCA禁忌：</strong>超急性肝衰竭（转氨酶>1000 IU/L）、心源性休克（乳酸>8 mmol/L）。注意：慢加急性肝衰竭/肝硬化可能仍可耐受RCA。</p>`,
     pearl:'总钙/iCa>2.5 = 枸橼酸蓄积红旗。四项全满足→停RCA。禁忌：超急性肝衰+心源性休克乳酸>8。', refs:['Slowinski T et al. Crit Care 2015','UpToDate 2026'] },
-  { id:'rca-vs-heparin', cat:'anticoag', title:'RCA vs 肝素：证据对比',
+  { id:'rca-vs-heparin', cat:'crrt-anticoag', title:'RCA vs 肝素：证据对比',
     content:`<p><strong>Meta分析（11 RCT, 992例）：</strong>vs全身肝素——</p><ul>
     <li>回路丢失风险↓ (HR 0.76)</li><li>出血风险↓ (RR 0.36)</li><li>滤器寿命↑</li><li>生存率：无差异</li></ul>
     <p><strong>最大RCT (Zarbock 2020, JAMA, 596例)：</strong>RCA vs 全身肝素——滤器寿命延长，但新发感染率更高。生存率无差异。</p>
     <p><strong>COVID-19特殊时期：</strong>很多中心联合使用全身肝素+RCA，未观察到出血增加（因RCA不抑制血小板活化和凝血酶生成）。</p>
     <p><strong>滤器寿命延长≠生存获益。</strong>Cochrane系统综述结论：CKRT最有效抗凝方案尚待确定。</p>`,
     pearl:'RCA比肝素：滤器寿命更长+出血更少，但生存率无差异。滤器寿命延长≠生存获益。', refs:['Zarbock A et al. JAMA 2020','Bai M et al. Intensive Care Med 2015'] },
-  { id:'heparin-ac', cat:'anticoag', title:'肝素抗凝',
+  { id:'heparin-ac', cat:'crrt-anticoag', title:'肝素抗凝',
     content:`<p><strong>方案 (UpToDate)：</strong>首剂负荷500-1000 U，然后500 U/h维持。根据aPTT调整。</p>
     <p><strong>目标：</strong>aPTT 45秒或aPTTr 1.5倍正常值。DIC或血小板减少患者应减量。</p>
     <p><strong>缺点：</strong>药代动力学不可预测（个体差异大）、HIT风险、抗凝血酶缺乏致肝素抵抗、出血风险10-50%（与aPTT延长程度相关）。</p>
@@ -1111,7 +1716,7 @@ const kbData = [
     pearl:'肝素：首剂500-1000U + 500U/h维持，目标aPTT 45秒。出血风险10-50%与aPTT延长相关。肝素涂层膜无额外获益。', refs:['Davenport A. UpToDate 2026'] },
 
   // ===== CRRT 模式 (1) =====
-  { id:'modes', cat:'modes', title:'CRRT 四种模式对比',
+  { id:'modes', cat:'crrt-modes', title:'CRRT 四种模式对比',
     content:`<table><tr><th>模式</th><th>机制</th><th>超滤率</th><th>置换液</th><th>透析液</th><th>适用场景</th></tr>
     <tr><td>SCUF</td><td>单纯超滤</td><td>2-8 mL/min</td><td>无</td><td>无</td><td>仅液体过负荷</td></tr>
     <tr><td>CVVH</td><td>对流</td><td>20-25 mL/kg/h</td><td>✓(大量)</td><td>无</td><td>AKI+中大分子清除</td></tr>
@@ -1123,7 +1728,7 @@ const kbData = [
     pearl:'SCUF仅液体移除≈100-500mL/h。CVVH超滤率高→需大量置换液→FF高。CVVHD溶质清除独立于超滤率，滤器寿命长。' },
 
   // ===== 处方与剂量 (5) =====
-  { id:'dosing', cat:'dosing', title:'CRRT 剂量',
+  { id:'dosing', cat:'crrt-dosing', title:'CRRT 剂量',
     content:`<p><strong>标准剂量：</strong>废液速率 20-25 mL/kg/h（KDIGO推荐处方25-30以保证交付20-25）。</p>
     <p><strong>处方剂量 vs 交付剂量：</strong>滤器凝血、前稀释、停机时间→实际交付≈处方的70-80%。DO-RE-MI研究：中位处方34.3 vs 交付27 mL/kg/h。</p>
     <p><strong>关键RCT：</strong></p><ul>
@@ -1133,7 +1738,7 @@ const kbData = [
     <p><strong>高剂量风险：</strong>低磷血症↑、机械通气延长、电解质紊乱↑（低钾、低磷）。患者水平meta分析：更强化KRT与肾功能恢复延迟相关。</p>
     <p><strong>最低可接受剂量：</strong>观察性数据显示死亡率在交付剂量<13-15 mL/kg/h时才增加。</p>`,
     pearl:'标准20-25 mL/kg/h。处方建议25-30以保证交付。RENAL和ATN确立"天花板效应"——高剂量无额外获益。', refs:['RENAL Study. NEJM 2009','ATN Study. NEJM 2008','KDIGO 2012'] },
-  { id:'prescription-detail', cat:'dosing', title:'处方参数详解',
+  { id:'prescription-detail', cat:'crrt-dosing', title:'处方参数详解',
     content:`<p><strong>模式选择：</strong>UpToDate推荐CVVHD或CVVHDF而非纯CVVH（纯对流FF更高→凝血风险更大）。无证据表明某种模式临床结局更优。</p>
     <p><strong>剂量 (废液速率)：</strong>≥20 mL/kg/h。严重高钾/代酸/高氨血症可能需要更高剂量。</p>
     <p><strong>血流速 Qb：</strong>全身抗凝200，RCA 100-150，无抗凝250-300 mL/min。</p>
@@ -1141,7 +1746,7 @@ const kbData = [
     <p><strong>液体清除：</strong>目标每小时零平衡到负100-200 mL/h（24h零到负2-4L）。最低死亡率对应净超滤1.0-1.75 mL/kg/h（U形曲线）。</p>
     <p><strong>监测：</strong>电解质+血气 q6-12h（稳定后可q12-24h），RCA时更频繁。</p>`,
     pearl:'模式选CVVHD/CVVHDF（非纯CVVH）。Qb 200(RCA 100-150)。FF<20%。液体清除1.0-1.75 mL/kg/h死亡率最低。' },
-  { id:'ckrt-solutions', cat:'dosing', title:'置换液/透析液成分',
+  { id:'ckrt-solutions', cat:'crrt-dosing', title:'置换液/透析液成分',
     content:`<table><tr><th>成分</th><th>标准浓度</th><th>注意事项</th></tr>
     <tr><td>Na+</td><td>130-140 mEq/L</td><td>RCA时用低钠(130)防高钠（枸橼酸含钠）</td></tr>
     <tr><td>K+</td><td>0-4 mEq/L</td><td>常规用4；严重高钾用0或2；CVVHDF两种液等速混合可得2mEq/L</td></tr>
@@ -1151,7 +1756,7 @@ const kbData = [
     <tr><td>葡萄糖</td><td>0 或 100-110 mg/dL</td><td>无糖液改善血糖控制；少数可致低血糖/酮症酸中毒</td></tr></table>
     <p><strong>建议使用商业化预配液</strong>，避免现场配制（减少配制差错）。严重高钾时IHD优于CKRT——IHD每分钟钾清除效率远高于CKRT。</p>`,
     pearl:'RCA三调整：低Na(130)、低HCO3-(22-25)、无钙液。常规患者用4K液，高钾用0-2K。含磷液减少低磷血症。' },
-  { id:'ff-explained', cat:'dosing', title:'滤过分数 (FF) 详解',
+  { id:'ff-explained', cat:'crrt-dosing', title:'滤过分数 (FF) 详解',
     content:`<p><strong>定义：</strong>进入透析器的血浆水中经超滤跨膜移除的比例。</p>
     <p><strong>公式：</strong></p>
     <p><code>FF = 超滤流速 / 血浆水流速</code></p>
@@ -1162,7 +1767,7 @@ const kbData = [
     <p><strong>为什么CVVHD的FF天然低于CVVH：</strong>在同样废液速率下，CVVH所有清除靠对流（=高超滤），而CVVHD溶质清除靠弥散（超滤仅用于净液体移除，速率低得多）。</p>
     <p><strong>降低FF三招：</strong>(1)增加Qb（增加血浆水流速）(2)使用前稀释（前置换液增加血浆水流速）(3)切换为CVVHD或CVVHDF（减少对流比例）</p>`,
     pearl:'FF>20%=凝血风险↑。同样参数下CVVH的FF总是高于CVVHD。降FF：增Qb、前稀释、换CVVHD/CVVHDF。' },
-  { id:'fluid-balance', cat:'dosing', title:'液体平衡管理',
+  { id:'fluid-balance', cat:'crrt-dosing', title:'液体平衡管理',
     content:`<p><strong>目标：</strong>每小时零平衡到负100-200 mL/h（24h零到负2-4L）。由肾脏科+ICU团队共同确定目标小时液体平衡，床旁护士调整净超滤。</p>
     <p><strong>容量评估：</strong>查体+超声(IVC变异度/肺B线)+BIA。</p>
     <p><strong>U形曲线：</strong>净超滤1.0-1.75 mL/kg/h死亡率最低。过高或过低均增加风险。但注意：该数据仅反映机器设定值，不能完全排除病情严重度的混杂（需要更多输液=更高设定超滤=更高病情严重度）。</p>
@@ -1171,7 +1776,7 @@ const kbData = [
     pearl:'最佳净超滤：1.0-1.75 mL/kg/h（U形曲线死亡率最低）。由肾内科+ICU协作确定目标。不耐受→暂停超滤。' },
 
   // ===== 并发症与故障 (4) =====
-  { id:'complications', cat:'complications', title:'常见并发症与处理',
+  { id:'complications', cat:'crrt-complications', title:'常见并发症与处理',
     content:`<table><tr><th>并发症</th><th>原因/机制</th><th>处理</th></tr>
     <tr><td>低血压</td><td>超滤过快、有效容量不足</td><td>暂停超滤、补液、减净超滤率、血管活性药</td></tr>
     <tr><td>低磷血症(>50%)</td><td>磷经滤器持续丢失，与废液速率正相关</td><td>用含磷置换液(1 mmol/L)，必要时静脉补磷</td></tr>
@@ -1184,7 +1789,7 @@ const kbData = [
     <tr><td>导管感染</td><td>导管相关血流感染</td><td>严格无菌操作、拔除感染导管、抗感染</td></tr></table>
     <p>低磷血症与呼吸衰竭延长相关（RCT：>50%患者发生）。</p>`,
     pearl:'低磷血症最常见(>50%患者)，与呼吸衰竭延长相关。用含磷置换液可避免。抗生素亚治疗浓度常被忽视——TDM是关键。' },
-  { id:'alarm-trouble', cat:'complications', title:'常见报警与处理',
+  { id:'alarm-trouble', cat:'crrt-complications', title:'常见报警与处理',
     content:`<table><tr><th>报警</th><th>常见原因</th><th>处理</th></tr>
     <tr><td>动脉压低(大负压)</td><td>导管贴壁/部分堵塞、Qb过高</td><td>调整体位/导管、冲洗管腔、调换动静脉端、降低Qb</td></tr>
     <tr><td>静脉压高</td><td>回输端堵塞、管路扭结</td><td>检查管路通畅、确认导管位置</td></tr>
@@ -1194,7 +1799,7 @@ const kbData = [
     <tr><td>平衡报警</td><td>入液/出液偏差>5%</td><td>检查秤上无接触→重新校准→确认液袋无挤压</td></tr></table>
     <p><strong>回路凝血防治：</strong>管路凝血的最常见原因是报警后反应迟缓（报警→停泵→血流停滞→凝血）。CKRT体外管路和滤器只能处理有限血量——Qb>300 mL/min时更快达到寿命上限。</p>`,
     pearl:'报警响应迟缓是管路凝血的最常见原因。TMP逐渐升高=滤器凝血的最早信号。Qb>300反而缩短管路寿命。' },
-  { id:'drug-dosing-ckrt', cat:'complications', title:'CKRT中药物剂量',
+  { id:'drug-dosing-ckrt', cat:'crrt-complications', title:'CKRT中药物剂量',
     content:`<p><strong>核心公式：</strong></p>
     <p><code>CKRT药物清除率(mL/min) = 废液流速(L/h) × 未结合分数 × 1000/60</code></p>
     <p>总清除率 = CKRT清除 + 残余肾功能清除（尿量≥20mL/h时需评估）</p>
@@ -1206,59 +1811,276 @@ const kbData = [
     pearl:'AKI肝代谢>ESKD→不能套用ESKD剂量！25% β-内酰胺达亚治疗浓度→TDM是关键。血管活性药/镇静药滴定临床效果即可。', refs:['Mueller BA, Golper TA. UpToDate 2026','Lewis SJ, Mueller BA. Semin Dial 2014'] },
 
   // ===== 关键临床试验 (7) =====
-  { id:'startt-aki', cat:'trials', title:'STARRT-AKI (2020) — 启动时机',
+  { id:'startt-aki', cat:'crrt-trials', title:'STARRT-AKI (2020) — 启动时机',
     content:`<p><strong>NEJM 2020;383:240-251.</strong> 15国168中心，3019例重症AKI（无紧急适应证）。</p>
     <p><strong>干预：</strong>早期启动(12h内) vs 标准策略(出现适应证后启动)。</p>
     <p><strong>结果：</strong>90天死亡率43.9% vs 43.7% (p=0.92)。早期组更多依赖透析(10.4% vs 6.0%)、更多再住院(21% vs 17%)、更多不良事件(23% vs 17%)。早期组97%接受RRT vs 延迟组62%。</p>
     <p><strong>结论：</strong>无紧急适应证时，"观望等待"安全。早期启动增加医疗资源利用且无生存获益。</p>`,
     pearl:'无紧急适应证→等待安全。早期启动=更多透析依赖+不良事件+无生存获益。n=3019, NEJM 2020。' },
-  { id:'akiki', cat:'trials', title:'AKIKI (2016) — 启动时机',
+  { id:'akiki', cat:'crrt-trials', title:'AKIKI (2016) — 启动时机',
     content:`<p><strong>NEJM 2016;375:122-133.</strong> 法国31个ICU，620例KDIGO AKI 3期（需机械通气/血管活性药）。</p>
     <p><strong>干预：</strong>早期 vs 延迟RRT（出现紧急适应证后启动）。</p>
     <p><strong>结果：</strong>60天死亡率48.5% vs 49.7% (p=0.79)。延迟组49%最终无需RRT（自愈）。早期组导管相关感染率更高(10% vs 5%)。</p>
     <p><strong>结论：</strong>支持观望策略。约一半AKI 3期患者可自愈，无需RRT。</p>`,
     pearl:'AKI 3期≠必须RRT。延迟组49%自愈。早期组感染率翻倍(10% vs 5%)。' },
-  { id:'akiki-2', cat:'trials', title:'AKIKI-2 (2021) — 延迟多久？',
+  { id:'akiki-2', cat:'crrt-trials', title:'AKIKI-2 (2021) — 延迟多久？',
     content:`<p><strong>Lancet 2021;397:1293-1303.</strong> 法国多中心，278例重症AKI（无紧急适应证）。</p>
     <p><strong>设计：</strong>等待至少尿72h或BUN 112-140 mg/dL→随机分"启动"或"继续延迟至紧急适应证或BUN>140"。</p>
     <p><strong>结果：</strong>延迟组79%最终接受RRT。28天、60天死亡率差异无统计学意义，但延迟组数值更高（60天55% vs 44%, p未达显著）。</p>
     <p><strong>与STARRT-AKI对比：</strong>AKIKI-2的BUN值更高（延迟组均值123 vs STARRT-AKI延迟组85 mg/dL），提示存在一个目前未明确的安全延迟上限。</p>`,
     pearl:'存在一个不确定的"不可再等"阈值。过于延迟可能有害——但精准拐点因患者而异。BUN不作为主要决策工具。' },
-  { id:'renal-trial', cat:'trials', title:'RENAL (2009) — 剂量',
+  { id:'renal-trial', cat:'crrt-trials', title:'RENAL (2009) — 剂量',
     content:`<p><strong>NEJM 2009;361:1627-1638.</strong> 澳/新35个ICU，1508例，CVVHDF。</p>
     <p><strong>比较：</strong>25 vs 40 mL/kg/h。</p>
     <p><strong>结果：</strong>90天死亡率均为44.7% (OR 1.00, 95%CI 0.81-1.23)。90天仍依赖RRT：6.8% vs 4.4% (无显著差异)。</p>
     <p><strong>意义：</strong>最早确立CRRT剂量"天花板效应"的大型RCT。自此20-25 mL/kg/h成为标准。</p>`,
     pearl:'25 vs 40 mL/kg/h→死亡率完全相同(44.7%)。确立标准剂量20-25 mL/kg/h。高剂量=无获益+更多低磷血症。' },
-  { id:'atn-trial', cat:'trials', title:'ATN (2008) — 剂量',
+  { id:'atn-trial', cat:'crrt-trials', title:'ATN (2008) — 剂量',
     content:`<p><strong>NEJM 2008;359:7-20.</strong> 美国VA/NIH，1124例，IHD/CKRT/PIKRT根据血流动力学切换。</p>
     <p><strong>比较：</strong>强化组(IHD每周6次, CKRT 35 mL/kg/h) vs 标准组(IHD每周3次, CKRT 20 mL/kg/h)。</p>
     <p><strong>结果：</strong>60天死亡率53.6% vs 51.5% (p=0.47)。强化组低血压更多。肾功能恢复和RRT持续时间无差异。</p>
     <p><strong>意义：</strong>与RENAL一致——强化KRT无额外获益。KDIGO基于此推荐IHD Kt/V≥1.2/次（每周3次）。</p>`,
     pearl:'强化KRT(每周6次IHD或CKRT 35 mL/kg/h) vs 标准→死亡率无差异。强化组低血压更多。' },
-  { id:'ivoire', cat:'trials', title:'IVOIRE (2013) — 脓毒症高容量',
+  { id:'ivoire', cat:'crrt-trials', title:'IVOIRE (2013) — 脓毒症高容量',
     content:`<p><strong>Intensive Care Med 2013;39:1535-1546.</strong> 法国18个ICU，140例脓毒症休克合并AKI。</p>
     <p><strong>比较：</strong>HVHF 70 mL/kg/h vs 标准CVVH 35 mL/kg/h。</p>
     <p><strong>结果：</strong>28天死亡率37.1% vs 35.7% (p=1.0)。血流动力学改善无差异。</p>
     <p><strong>结论：</strong>高容量血滤对脓毒症休克无额外获益。不推荐常规使用。</p>`,
     pearl:'脓毒症休克70 mL/kg/h vs 35→死亡率无差异(37% vs 36%)。高容量血滤不推荐常规使用。' },
-  { id:'liberate-d', cat:'trials', title:'LIBERATE-D (2026) — 撤机策略',
+  { id:'liberate-d', cat:'crrt-trials', title:'LIBERATE-D (2026) — 撤机策略',
     content:`<p><strong>JAMA 2026;335:326.</strong> 220例KRT依赖AKI但已脱离升压药和机械通气的住院患者。</p>
     <p><strong>比较：</strong>保守策略（按需透析）vs 常规每周3次透析至满足尿量/肌酐清除率标准。</p>
     <p><strong>结果：</strong>保守组出院时肾功能恢复率更高(64% vs 50%)且恢复更快(2天 vs 8.5天)。多变量校正后差异无统计学意义。</p>
     <p><strong>意义：</strong>肾功能即将恢复时（尿量↑、肌酐↓）→个体化减量透析→可能加速肾功能恢复。需更多RCT验证。</p>`,
-    pearl:'肾功能恢复期：保守策略(按需透析)可能加速恢复(64% vs 50%)。不建议僵化地坚持每周3次。' }
+    pearl:'肾功能恢复期：保守策略(按需透析)可能加速恢复(64% vs 50%)。不建议僵化地坚持每周3次。' },
+
+  // ===== DPMAS (5) =====
+  { id:'dpmas-principle', cat:'dpmas-principles', title:'DPMAS 原理与机制',
+    content:`<p><strong>DPMAS（双重血浆分子吸附系统）</strong>将血浆分离后依次通过两个吸附柱：</p>
+    <ol><li><strong>中性大孔树脂吸附柱（HA330-II/BS330）</strong>：吸附中大分子毒素（胆红素、胆汁酸、炎症因子）</li>
+    <li><strong>离子交换树脂吸附柱</strong>：选择性吸附胆红素</li></ol>
+    <p><strong>核心优势：不依赖血浆</strong>——无需补充外源性血浆或白蛋白，避免血浆过敏、输血相关感染和血源紧张问题。</p>
+    <p><strong>与PE对比：</strong>PE需大量FFP且清除有益物质（凝血因子、免疫球蛋白），DPMAS选择性更强。但DPMAS不补充凝血因子——肝衰竭合并凝血障碍者需权衡。</p>
+    <p>血浆分离器（0.2-0.5μm孔径）将血浆从全血中分离→血浆流经吸附柱→处理后血浆回输体内。</p>`,
+    pearl:'DPMAS核心优势：不依赖血浆，避免输血风险。与PE互补——PE补充凝血因子，DPMAS选择性清除胆红素。二者可根据需要序贯使用。', refs:['APASL ACLF Guidelines 2019','中国DPMAS临床应用专家共识 2018'] },
+  { id:'dpmas-indications', cat:'dpmas-indications', title:'DPMAS 适应证与禁忌证',
+    content:`<p><strong>主要适应证：</strong></p><ul>
+    <li><strong>肝衰竭</strong>（急性、慢加急性、慢性急性发作）：TBil > 200 μmol/L</li>
+    <li><strong>高胆红素血症</strong>药物效果不佳</li>
+    <li><strong>脓毒症合并肝损伤</strong>：清除内毒素和炎症因子</li>
+    <li><strong>药物性肝损伤</strong>：促进胆红素下降</li>
+    <li><strong>肝移植桥接</strong>：等待移植期间维持</li>
+    <li><strong>胆汁淤积</strong>：术后或良性胆汁淤积</li>
+    <li><strong>甲状腺功能亢进危象</strong>（部分中心经验）</li></ul>
+    <p><strong>禁忌证：</strong></p><ul>
+    <li>严重凝血功能障碍（INR > 3）伴活动性出血</li>
+    <li>血流动力学极度不稳定（MAP < 55 mmHg尽管血管活性药）</li>
+    <li>对吸附柱材料（树脂）过敏</li>
+    <li>严重血小板减少（< 30k）——相对禁忌</li></ul>`,
+    pearl:'主要适应证：肝衰竭+高胆红素(TBil>200)。禁忌：INR>3+活动性出血、极度血流动力学不稳定。慢加急性肝衰竭/肝硬化可能仍可耐受。' },
+  { id:'dpmas-params', cat:'dpmas-parameters', title:'DPMAS 参数设置与方案',
+    content:`<table class="param-ref-table"><tbody>
+    <tr><td>血流速 (Qb)</td><td>100-150 mL/min（低于CRRT，因需经过血浆分离+吸附双重阻力）</td></tr>
+    <tr><td>血浆分离比例</td><td>15-20% 血流速（如Qb=120→血浆流速=18-24 mL/min）</td></tr>
+    <tr><td>单次时长</td><td>2-4 小时（吸附柱2-3h逐渐饱和）</td></tr>
+    <tr><td>疗程次数</td><td>3-5 次/疗程，隔日一次</td></tr>
+    <tr><td>抗凝</td><td>肝素：首剂2000-3000U, 维持1000-1500U/h；ACT 180-220s</td></tr>
+    <tr><td>血管通路</td><td>双腔透析导管（同CRRT），11-14Fr</td></tr>
+    <tr><td>预充</td><td>生理盐水500mL+肝素预充管路和吸附柱</td></tr>
+    <tr><td>目标</td><td>TBil单次降幅>30%，临床症状改善</td></tr></tbody></table>
+    <p><strong>实际操作流程：</strong>预充管路→连接患者→起始Qb 80-100 mL/min→调至目标→血浆分离→吸附→回输→Q2-3h评估吸附饱和→必要时更换吸附柱。</p>`,
+    pearl:'Qb 100-150（低于CRRT）、血浆分离比15-20%、单次2-4h、3-5次/疗程。抗凝比CRRT高（树脂吸附肝素）。吸附柱2-3h饱和→可更换（最多2-3个/次）。' },
+  { id:'dpmas-monitor', cat:'dpmas-parameters', title:'DPMAS 监测与并发症',
+    content:`<p><strong>治疗中监测：</strong></p><ul>
+    <li>生命体征 q30min（血压、心率、SpO₂）</li><li>凝血功能 q2-4h（ACT、aPTT）</li>
+    <li>吸附柱前/后压力（压差增大→饱和或凝血）</li><li>血浆颜色观察（应逐渐变清亮）</li>
+    <li>TBil 治疗前后对比</li></ul>
+    <p><strong>常见并发症：</strong></p><ul>
+    <li><strong>低血压（10-15%）</strong>：血浆丢失、体外循环容量→减慢血流速、补液、必要时升压</li>
+    <li><strong>出血（5-10%）</strong>：肝素+凝血因子消耗→调整肝素剂量、补充FFP</li>
+    <li><strong>血小板减少</strong>：吸附柱表面血小板吸附→监测、必要时输注</li>
+    <li><strong>过敏反应（<1%）</strong>：树脂材料→抗组胺药、激素、严重者停止治疗</li>
+    <li><strong>低钙血症</strong>（如使用枸橼酸抗凝）：监测iCa、补钙</li>
+    <li><strong>管路凝血</strong>：ACT不足→调整肝素</li></ul>
+    <p><strong>终点评估：</strong>TBil下降>30%为有效；临床症状（意识、黄疸、乏力）改善为最终目标。</p>`,
+    pearl:'监测重点：ACT q30min（180-220s）、凝血q2-4h、血浆颜色变化。常见并发症：低血压(10-15%)、出血(5-10%)、血小板减少。吸附柱2-3h饱和——注意更换时机。' },
+  { id:'dpmas-vs-pe', cat:'dpmas-parameters', title:'DPMAS vs PE 在肝衰竭中的应用',
+    content:`<p><strong>两者对比：</strong></p>
+    <table><tr><th>特性</th><th>DPMAS</th><th>PE</th></tr>
+    <tr><td>机制</td><td>树脂吸附+离子交换</td><td>血浆分离+丢弃+补充FFP</td></tr>
+    <tr><td>胆红素清除</td><td>单次降30-50%</td><td>单次降30-50%</td></tr>
+    <tr><td>需血浆</td><td>不需要</td><td>需要(~2000-3000mL/次)</td></tr>
+    <tr><td>补充凝血因子</td><td>不补充</td><td>补充(来自FFP)</td></tr>
+    <tr><td>输血风险</td><td>无</td><td>有(过敏、感染)</td></tr>
+    <tr><td>炎症介质清除</td><td>较强</td><td>非选择性清除</td></tr>
+    <tr><td>费用</td><td>低(无血浆费用)</td><td>高(FFP费用)</td></tr>
+    <tr><td>凝血障碍患者</td><td>慎用(INR>3禁忌)</td><td>适用(补充凝血因子)</td></tr></table>
+    <p><strong>临床选择原则：</strong>凝血障碍+高胆红素→PE；无凝血障碍+高胆红素→DPMAS（省钱、无输血风险）；重症肝衰竭→两者序贯（PE补充凝血因子后接DPMAS维持胆红素清除）。</p>`,
+    pearl:'凝血障碍→PE（补充凝血因子）；无凝血障碍→DPMAS（省钱、无输血风险）；重症→两者序贯。DPMAS和PE胆红素清除效率相当。' },
+
+  // ===== PE (5) =====
+  { id:'pe-principle', cat:'pe-principles', title:'TPE 治疗性血浆置换原理',
+    content:`<p><strong>治疗性血浆置换(TPE)</strong>通过分离并丢弃患者血浆，以等量置换液（FFP/白蛋白）替代。</p>
+    <p><strong>两种技术：</strong></p><ul>
+    <li><strong>离心法</strong>：利用血液成分密度差异分离血浆（血库设备，需枸橼酸抗凝）</li>
+    <li><strong>膜分离法</strong>：利用血浆分离器（0.2μm孔径）过滤血浆（CRRT设备即可，可用肝素抗凝）</li></ul>
+    <p><strong>清除机制：</strong>去除循环中的致病性大分子物质——自身抗体(IgG/IgM)、免疫复合物、冷球蛋白、异常蛋白、毒素（>15kDa蛋白结合）。</p>
+    <p><strong>补充机制：</strong>FFP置换补充缺乏的酶/因子（TTP的ADAMTS13、Wilson病的铜蓝蛋白）。</p>
+    <p><strong>注意：</strong>PE非根治性治疗——自身抗体持续产生，需联合免疫抑制治疗（糖皮质激素+环磷酰胺/利妥昔单抗等）。PE仅是"桥接"到免疫抑制起效（通常1-2周）。</p>`,
+    pearl:'PE清除致病抗体+补充缺乏因子。膜分离法可在CRRT设备上完成。PE是桥接治疗——必须联合免疫抑制治疗。1.0×PV置换可清除~63%血管内物质，1.5×PV可清除~78%。', refs:['ASFA Guidelines 2019','Kaplan AA. Therapeutic Plasma Exchange 2021'] },
+  { id:'pe-indications', cat:'pe-indications', title:'PE 适应证 (ASFA分类)',
+    content:`<p><strong>ASFA I类（一线治疗，有高质量证据）：</strong></p><ul>
+    <li><strong>TTP</strong>（血栓性血小板减少性紫癜）：每日置换直到血小板>150k×2天+LDH正常</li>
+    <li><strong>GBS</strong>（格林-巴利综合征）：重型/进展型，5次/10-14天</li>
+    <li><strong>重症肌无力危象</strong>：呼吸衰竭前期或呼吸衰竭</li>
+    <li><strong>ANCA相关急进性肾炎+DAH</strong>（弥漫性肺泡出血）：PE+免疫抑制</li>
+    <li><strong>抗GBM病(Goodpasture)</strong>：非透析依赖期（透析依赖者PE获益小）</li>
+    <li><strong>Wilson病</strong>（暴发性肝衰竭+溶血）：桥接肝移植</li>
+    <li><strong>CIDP</strong>（慢性炎症性脱髓鞘性多神经病）：二线(IVIG无效/不耐受)</li></ul>
+    <p><strong>ASFA II类（二线治疗）：</strong>灾难性APS、严重SLE（肾炎/CNS）、 Rasmussen脑炎等。</p>
+    <p><strong>ASFA III类（证据不足，个案决策）：</strong>脓毒症MODS、急性肝衰竭(非Wilson)等。</p>`,
+    pearl:'ASFA I类：TTP(每日置换)、GBS、MG危象、AAV+DAH、Goodpasture(非透析依赖)、Wilson病。PE必须联合免疫抑制——不能单独使用。TTP每日置换≥2周是标准方案。', refs:['ASFA Guidelines 2019 (J Clin Apher)'] },
+  { id:'pe-formula', cat:'pe-parameters', title:'PE 置换量计算',
+    content:`<p><strong>血浆容量(PV)估算（简化公式）：</strong></p>
+    <p style="font-size:1.1rem;text-align:center;padding:8px;background:var(--bg);border-radius:4px"><strong>PV (mL) = 0.065 × 体重(kg) × (1 - Hct)</strong></p>
+    <p><strong>交换量与清除率：</strong></p><ul>
+    <li>1.0×PV = 清除约63%血管内物质（标准置换）</li>
+    <li>1.2×PV = 清除约70%</li>
+    <li>1.5×PV = 清除约78%（最大推荐）</li>
+    <li>>1.5×PV → 边际获益递减，不良反应↑</li></ul>
+    <p><strong>疗程推荐（因疾病而异）：</strong></p><ul>
+    <li>TTP：每日置换直到血小板>150k持续2天+LDH正常（通常≥2周）</li>
+    <li>GBS：5次置换/10-14天（轻症可减）</li>
+    <li>MG危象：3-5次置换/7-14天</li>
+    <li>Goodpasture：每日或隔日×2周</li>
+    <li>AAV+DAH：隔日×5-7次</li></ul>`,
+    pearl:'PV = 0.065×体重×(1-Hct)。1.0×PV清除~63%，1.5×清除~78%。超过1.5×获益递减。TTP须每日置换（不是隔日），直到血小板达标。', refs:['Kaplan AA. J Clin Apher 2021'] },
+  { id:'pe-fluid', cat:'pe-parameters', title:'PE 置换液选择与抗凝',
+    content:`<p><strong>置换液选择：</strong></p><ul>
+    <li><strong>FFP（新鲜冰冻血浆）首选场景：</strong>TTP（补充ADAMTS13）、肝衰竭合并凝血障碍（补充凝血因子）、出血高风险者</li>
+    <li><strong>5%白蛋白首选场景：</strong>GBS、MG、CIDP等（无需补充凝血因子）——避免FFP的过敏和枸橼酸负荷</li>
+    <li><strong>混合方案：</strong>前2/3用白蛋白、后1/3用FFP（兼顾费用和凝血因子补充）</li></ul>
+    <p><strong>FFP注意事项：</strong></p><ul>
+    <li>枸橼酸负荷：每单位FFP含~14%枸橼酸抗凝剂→低钙血症风险</li>
+    <li>钙补充方案：每3单位FFP补充10%葡萄糖酸钙10mL IV</li>
+    <li>过敏预防：苯海拉明25-50mg IV/PO置换前</li>
+    <li>血型匹配：ABO相容（紧急时A型→AB型可用）</li></ul>
+    <p><strong>抗凝：</strong>离心法用枸橼酸（ACD-A）；膜分离法可用肝素（首剂1000-2000U，ACT 180-220s）或无抗凝。</p>`,
+    pearl:'TTP→FFP(补充ADAMTS13)；GBS/MG→白蛋白(避免FFP风险)。FFP：每3单位补10%葡萄糖酸钙10mL。置换前给抗组胺药。枸橼酸中毒表现为口周麻木、QT延长。' },
+  { id:'pe-complications', cat:'pe-complications', title:'PE 并发症与处理',
+    content:`<p><strong>发生率：</strong>总体5-20%，严重<3%。从高到低排列：</p>
+    <ol>
+    <li><strong>低钙血症（枸橼酸毒性，10-20%）</strong>：FFP中枸橼酸螯合钙→口周/肢端麻木→手足抽搐→QT延长→严重心律失常。处理：减慢置换速度+补钙（10%葡萄糖酸钙10mL IV）+监测iCa q1h</li>
+    <li><strong>过敏反应（3-10%）</strong>：斑丘疹→荨麻疹→支气管痉挛→过敏性休克。处理：抗组胺药、氢化可的松、肾上腺素（严重者）。预给药可减少发生率</li>
+    <li><strong>低血压（5-10%）</strong>：低血容量或血管迷走反应。处理：减慢速度+补液+Trendelenburg体位</li>
+    <li><strong>出血（3-5%）</strong>：凝血因子消耗+抗凝药。处理：换用白蛋白减少凝血因子消耗、调整抗凝</li>
+    <li><strong>感染（<1%）</strong>：IVIG消耗→感染风险↑。TTP长期置换者考虑IVIG替代</li>
+    <li><strong>低体温</strong>：冷置换液→加温器37°C预热</li></ol>
+    <p><strong>死亡风险：</strong>约0.05%（1/2000），主要来自过敏性休克和严重出血。</p>`,
+    pearl:'最常见并发症：低钙血症(10-20%，每3单位FFP补钙10mL)、过敏(3-10%，预给抗组胺药)、低血压(5-10%，减慢速度)。死亡风险~0.05%。置换后凝血因子恢复：Fib 50%/24h、PT 4-6h。' },
+
+  // ===== HP (4) =====
+  { id:'hp-principle', cat:'hp-principles', title:'HP 血液灌流原理',
+    content:`<p><strong>血液灌流(HP)</strong>：全血直接通过吸附柱——血液与吸附剂（活性炭或树脂）直接接触，毒素被吸附清除。</p>
+    <p><strong>与HD/CRRT的关键区别：</strong></p><ul>
+    <li>HP是<strong>吸附</strong>机制（依赖吸附剂亲和力）→不依赖分子大小和水溶性</li>
+    <li>CRRT/HD是<strong>弥散+对流</strong>机制（依赖半透膜孔径+浓度梯度）→仅清除水溶性小分子</li>
+    <li>HP可清除<strong>高蛋白结合毒素和大分子</strong>——这些是HD/CRRT无法有效清除的</li></ul>
+    <p><strong>吸附剂类型：</strong></p><ul>
+    <li><strong>活性炭（HA230）</strong>：广谱吸附，比表面积大(800-1200 m²/g)，适用于大部分外源性中毒</li>
+    <li><strong>中性大孔树脂（HA330/HA380）</strong>：特异性吸附炎症介质(TNFα, IL-1β, IL-6)、胆红素、内毒素→脓毒症应用</li>
+    <li><strong>灌流器容量：</strong>150-300mL，含活性炭或树脂珠</li></ul>
+    <p><strong>局限性：</strong>不纠正电解质紊乱、酸中毒、液体过负荷——需要时联合HD/CRRT。</p>`,
+    pearl:'HP通过吸附清除高蛋白结合和大分子毒素——弥补HD/CRRT盲区。但HP不解决电解质和液体问题——严重中毒合并AKI可在灌流器后串联透析器。活性炭=广谱吸附，树脂=炎症介质特异性。' },
+  { id:'hp-indications', cat:'hp-indications', title:'HP 适应证',
+    content:`<p><strong>中毒（核心适应证）：</strong>以下特征提示血液灌流可能优于血液透析：</p>
+    <ul><li>蛋白结合率 > 80%（巴比妥类、三环类抗抑郁药、苯妥英、地高辛）</li>
+    <li>大分布容积 Vd > 1 L/kg（脂溶性药物在组织中储存）</li>
+    <li>无特效解毒剂（百草枯、鹅膏毒蕈/毒蘑菇(amatoxin)、有机磷）</li>
+    <li>摄入量超过内源性清除能力+临床进行性恶化</li></ul>
+    <p><strong>具体毒物举例：</strong></p><ul>
+    <li>百草枯（paraquat）——可能救命！必须尽早（<4h）</li>
+    <li>鹅膏毒蕈（死亡帽蘑菇）——amatoxin高肝毒性，HP可降低死亡风险</li>
+    <li>巴比妥类（phenobarbital, butalbital）——长半衰期</li>
+    <li>茶碱（theophylline）——HP清除效率>HD</li>
+    <li>有机磷农药——急性重度中毒在阿托品+PAM基础上加HP</li></ul>
+    <p><strong>脓毒症（争议）：</strong>树脂灌流器(HA330/HA380)清除炎症因子→小样本研究示血流动力学改善，但大型RCT证据缺乏→不推荐常规使用，可个体化考虑。</p>`,
+    pearl:'HP最佳适应证：高蛋白结合+大Vd+无毒物解毒剂的中毒。百草枯和鹅膏毒蕈→早期HP可能救命。脓毒症HP证据不足→不常规推荐。摄入<6h是最佳清除窗口。' },
+  { id:'hp-params', cat:'hp-parameters', title:'HP 参数设置与抗凝',
+    content:`<table class="param-ref-table"><tbody>
+    <tr><td>血流速 (Qb)</td><td>150-200 mL/min（比CRRT高以补偿灌流器阻力）</td></tr>
+    <tr><td>单次时长</td><td>2-3 小时（灌流器饱和后停止——继续无用）</td></tr>
+    <tr><td>灌流器更换</td><td>每2-3h更换1个灌流器，每次治疗最多2-3个灌流器</td></tr>
+    <tr><td>抗凝</td><td>肝素 2000-3000U 首剂 + 1000-1500U/h 维持</td></tr>
+    <tr><td>ACT目标</td><td>180-220s（比CRRT高——活性炭吸附肝素！）</td></tr>
+    <tr><td>血管通路</td><td>双腔透析导管 11-14Fr（同CRRT）</td></tr>
+    <tr><td>联合HD</td><td>灌流器在前→透析器在后（串联），可同时进行HP+HD</td></tr></tbody></table>
+    <p><strong>肝素高剂量原因：</strong>活性炭表面大量吸附肝素（>50%以上）→ACT效价降低→需要比CRRT高2-3倍的肝素剂量才能达到相同ACT目标。ACT监测频率：q30min。</p>
+    <p><strong>灌流器饱和判断：</strong>吸附效率降低（血液入口/出口毒素浓度差减小）→更换灌流器。</p>
+    <p><strong>串联HP+HD步骤：</strong>引血→灌流器+透析器预充→连接患者→ACT达标→HP 2-3h→灌流器饱和→撤除灌流器→继续单独HD。</p>`,
+    pearl:'肝素剂量比CRRT高2-3倍（活性炭吸附肝素>50%！）——ACT q30min必须监测。灌流器2-3h饱和→必更换（继续使用无用且增加凝血风险）。HP+HD串联时灌流器在前、透析器在后。' },
+  { id:'hp-complications', cat:'hp-parameters', title:'HP 并发症与安全注意事项',
+    content:`<p><strong>并发症（发生率高于CRRT）：</strong></p><ul>
+    <li><strong>血小板减少（15-25%）</strong>：灌流器表面血小板黏附/活化→每2h监测血小板。如<50k→考虑输注血小板或停止HP</li>
+    <li><strong>低血压（10-20%）</strong>：体外循环容量(灌流器150-300mL)+血液-异物反应→起始慢Qb、补液</li>
+    <li><strong>管路凝血（15-20%）</strong>：肝素不足或灌流器饱和→监测ACT+及时更换饱和灌流器</li>
+    <li><strong>低钙/低血糖</strong>（较少见）：活性炭可吸附少量钙和葡萄糖→监测</li>
+    <li><strong>空气栓塞</strong>（罕见但致命！）：管路连接不严→必须监测气泡探测器→即时处理</li></ul>
+    <p><strong>绝对禁忌：</strong>严重血小板减少(<30k)、活动性大出血、血流动力学极端不稳定（MAP<55）。</p>
+    <p><strong>相对禁忌：</strong>血小板30-50k、近期手术、未控制的活动性出血（颅内出血等）。</p>`,
+    pearl:'最常见并发症：血小板减少(15-25%，灌流器吸附血小板)。HP并发症风险高于CRRT——需有经验团队操作。血小板<50k→考虑停止HP。灌流器饱和后继续使用→凝血+无效。' },
+
+  // ===== Cross-Modality (2) =====
+  { id:'modality-compare', cat:'decision', title:'四种血液净化模式对比',
+    content:`<table><tr><th>特性</th><th>CRRT</th><th>DPMAS</th><th>PE</th><th>HP</th></tr>
+    <tr><td>机制</td><td>弥散+对流</td><td>吸附(树脂+离子交换)</td><td>分离+丢弃+置换</td><td>吸附(活性炭/树脂)</td></tr>
+    <tr><td>主要目标</td><td>尿毒症毒素、水、电解质</td><td>胆红素、胆汁酸、炎症介质</td><td>自身抗体、免疫复合物</td><td>蛋白结合毒素、中大分子</td></tr>
+    <tr><td>Qb (mL/min)</td><td>100-300</td><td>100-150</td><td>100-150</td><td>150-200</td></tr>
+    <tr><td>时长</td><td>24h持续</td><td>2-4h/次</td><td>2-3h/次</td><td>2-3h/次</td></tr>
+    <tr><td>抗凝</td><td>RCA首选→肝素</td><td>肝素(ACT 180-220)</td><td>肝素/枸橼酸</td><td>肝素高剂量(ACT 180-220)</td></tr>
+    <tr><td>需血浆</td><td>否</td><td>否</td><td>是(FFP/白蛋白)</td><td>否</td></tr>
+    <tr><td>主要适应证</td><td>AKI(血流动力学不稳)</td><td>肝衰竭+高胆红素血症</td><td>自身抗体介导疾病</td><td>中毒(高蛋白结合毒素)</td></tr>
+    <tr><td>不解决的问题</td><td>蛋白结合毒素</td><td>尿毒症毒素、电解质、水</td><td>不根治(需免疫抑制)</td><td>电解质、水、酸中毒</td></tr>
+    <tr><td>证据级别</td><td>高(多项RCT/Meta)</td><td>中(观察性+中国RCT)</td><td>高(ASFA指南)</td><td>中-低(中毒有证据/脓毒症差)</td></tr></table>
+    <p style="margin-top:12px"><strong>联合使用场景：</strong>DPMAS+CRRT（肝肾综合征）、PE+CRRT（Goodpasture+AKI）、HP+HD（中毒+AKI）、DPMAS+PE序贯（重症肝衰竭）。</p>`,
+    pearl:'4种模式各有盲区：CRRT不解决蛋白结合毒素、DPMAS不解决水和尿毒症、PE需血浆且有感染风险、HP不解决电解质和液体。联合治疗可互补——根据主导问题矩阵选择。', refs:['ASFA 2019','APASL 2019','KDIGO 2012'] },
+  { id:'decision-guide', cat:'decision', title:'血液净化模式选择 — 新手入门指南',
+    content:`<p><strong>记住以下核心原则（决策口诀）：</strong></p>
+    <div class="wf-highlight-box"><h4>选模四步法</h4>
+    <ol><li><strong>肾脏为主+不稳定</strong> → CRRT</li>
+    <li><strong>肝脏为主+高胆红素</strong> → DPMAS（无凝血障碍）/ PE（伴凝血障碍）</li>
+    <li><strong>自身抗体介导</strong> → PE + 免疫抑制</li>
+    <li><strong>中毒+高蛋白结合/大Vd</strong> → HP（联合HD如有AKI）</li></ol></div>
+    <p><strong>常见联合方案：</strong></p><ul>
+    <li>肝肾综合征(AKI+高胆红素) → DPMAS + CRRT</li>
+    <li>TTP+AKI → PE + CRRT</li>
+    <li>中毒+AKI → HP + CRRT/HD 串联</li>
+    <li>脓毒症MODS → CRRT为主，HP可选(证据低)</li></ul>
+    <p><strong>不确定时：</strong>使用本网站"决策路径"交互工具进行逐步分析。同时咨询血液净化经验丰富的上级医生。</p>
+    <p><strong>永远记住：</strong>这一工具是辅助学习参考，不能替代临床判断。所有治疗决策需要结合患者具体病情、家属意愿、当地设备条件和指南推荐。</p>`,
+    pearl:'决策口诀：肾脏不稳定→CRRT；肝脏高胆红素→DPMAS/PE；自身抗体→PE+免疫抑制；中毒→HP。不确定时用交互决策路径工具。联合治疗互补盲区。' }
 ];
 
 const kbCatNames = {
   'all': '全部条目',
-  'principles': 'CRRT 基本原理',
-  'vascular': '血管通路',
-  'anticoag': '抗凝',
-  'modes': 'CRRT 模式',
-  'dosing': '处方与剂量',
-  'complications': '并发症与故障',
-  'trials': '关键临床试验'
+  'crrt-principles': 'CRRT 基本原理',
+  'crrt-vascular': 'CRRT 血管通路',
+  'crrt-anticoag': 'CRRT 抗凝',
+  'crrt-modes': 'CRRT 模式',
+  'crrt-dosing': 'CRRT 处方剂量',
+  'crrt-complications': 'CRRT 并发症',
+  'crrt-trials': 'CRRT 临床试验',
+  'dpmas-principles': 'DPMAS 原理',
+  'dpmas-indications': 'DPMAS 适应证',
+  'dpmas-parameters': 'DPMAS 操作参数',
+  'pe-principles': 'PE 原理与分类',
+  'pe-indications': 'PE 适应证',
+  'pe-parameters': 'PE 参数计算',
+  'pe-complications': 'PE 并发症',
+  'hp-principles': 'HP 原理与吸附剂',
+  'hp-indications': 'HP 适应证',
+  'hp-parameters': 'HP 操作参数',
+  'decision': '治疗决策与对比'
 };
 
 let kbFilter = 'all';
@@ -1348,102 +2170,283 @@ document.getElementById('kbShowBookmarked').addEventListener('click', function()
 
 // ===== Tool 4: Checklist =====
 const clData = {
-  'pre-initiation': {
-    label: '上机前核查',
-    categories: [
-      { name: '适应证', critical: false, items: [
-        { id:'pre-01', text:'AKI 伴血流动力学不稳定', detail:'IHD 无法耐受的低血压或血管活性药依赖', critical:false },
-        { id:'pre-02', text:'严重液体过负荷', detail:'利尿剂抵抗的肺水肿/全身水肿', critical:true },
-        { id:'pre-03', text:'严重电解质紊乱', detail:'K+>6.5 mmol/L 或 Na+<115/>160 mmol/L', critical:true },
-        { id:'pre-04', text:'严重代谢性酸中毒', detail:'pH<7.2 且补碱无效或液体负荷不允许', critical:true },
-        { id:'pre-05', text:'清除毒素/药物', detail:'如锂、二甲双胍相关性乳酸酸中毒', critical:false },
-        { id:'pre-06', text:'体温调控', detail:'严重低体温(>32°C)或高热', critical:false }
-      ]},
-      { name: '血管通路', critical: true, items: [
-        { id:'pre-07', text:'导管位置已确认', detail:'CXR 或超声确认导管尖端位于右心房-SVC交界处', critical:true },
-        { id:'pre-08', text:'导管型号合适', detail:'11-14 Fr 双腔透析导管，股静脉使用≥24 cm', critical:false },
-        { id:'pre-09', text:'导管功能正常', detail:'血流速>200 mL/min，动脉压>-200 mmHg', critical:true },
-        { id:'pre-10', text:'穿刺部位无感染/血肿', detail:'红、肿、渗出、血肿形成', critical:false }
-      ]},
-      { name: '抗凝方案', critical: true, items: [
-        { id:'pre-11', text:'抗凝方式已确定', detail:'RCA 首选，肝素/无抗凝备选。先尝试无抗凝→维持>24h则继续', critical:true },
-        { id:'pre-12', text:'枸橼酸使用前评估肝功能和乳酸', detail:'超急性肝衰(ALT>1000)或心源性休克(乳酸>8)→禁忌RCA。慢加急性肝衰/肝硬化可能仍可耐受', critical:true },
-        { id:'pre-13', text:'肝素使用前评估出血风险和HIT史', detail:'活动性出血、近期手术/创伤、血小板减少、HIT史', critical:true },
-        { id:'pre-14', text:'钙补充液已准备（RCA时）', detail:'10%葡萄糖酸钙或5%氯化钙。RCA透析液用低HCO3-(22-25)防碱中毒、低Na(130)', critical:true },
-        { id:'pre-14b', text:'枸橼酸蓄积风险评估', detail:'基线总钙/iCa比值、肝功能、乳酸水平记录', critical:false }
-      ]},
-      { name: '处方参数', critical: false, items: [
-        { id:'pre-15', text:'模式已确定', detail:'推荐CVVHD或CVVHDF（非纯CVVH）——弥散模式FF更低', critical:false },
-        { id:'pre-16', text:'剂量已处方', detail:'≥20 mL/kg/h，处方25-30以保证交付20-25', critical:false },
-        { id:'pre-17', text:'血流速已设定', detail:'抗凝200, RCA 100-150, 无抗凝250-300 mL/min', critical:false },
-        { id:'pre-18', text:'净超滤目标已设定', detail:'目标1.0-1.75 mL/kg/h（最低死亡率区间）。每小时零平衡到负100-200 mL/h', critical:false },
-        { id:'pre-19', text:'置换液/透析液已连接', detail:'检查成分(K+/HCO3-/Ca2+/磷)与抗凝方案匹配。RCA用低HCO3-液。优先使用商业化预配液', critical:false },
-        { id:'pre-20', text:'FF<20%已确认', detail:'滤过分数=超滤流速/血浆水流速。>20%→凝血风险↑', critical:false }
-      ]}
-    ]
+  CRRT: {
+    'pre-initiation': {
+      label: '上机前核查',
+      categories: [
+        { name: '适应证', critical: false, items: [
+          { id:'pre-01', text:'AKI 伴血流动力学不稳定', detail:'IHD 无法耐受的低血压或血管活性药依赖', critical:false },
+          { id:'pre-02', text:'严重液体过负荷', detail:'利尿剂抵抗的肺水肿/全身水肿', critical:true },
+          { id:'pre-03', text:'严重电解质紊乱', detail:'K+>6.5 mmol/L 或 Na+<115/>160 mmol/L', critical:true },
+          { id:'pre-04', text:'严重代谢性酸中毒', detail:'pH<7.2 且补碱无效或液体负荷不允许', critical:true },
+          { id:'pre-05', text:'清除毒素/药物', detail:'如锂、二甲双胍相关性乳酸酸中毒', critical:false },
+          { id:'pre-06', text:'体温调控', detail:'严重低体温(>32°C)或高热', critical:false }
+        ]},
+        { name: '血管通路', critical: true, items: [
+          { id:'pre-07', text:'导管位置已确认', detail:'CXR 或超声确认导管尖端位于右心房-SVC交界处', critical:true },
+          { id:'pre-08', text:'导管型号合适', detail:'11-14 Fr 双腔透析导管，股静脉使用≥24 cm', critical:false },
+          { id:'pre-09', text:'导管功能正常', detail:'血流速>200 mL/min，动脉压>-200 mmHg', critical:true },
+          { id:'pre-10', text:'穿刺部位无感染/血肿', detail:'红、肿、渗出、血肿形成', critical:false }
+        ]},
+        { name: '抗凝方案', critical: true, items: [
+          { id:'pre-11', text:'抗凝方式已确定', detail:'RCA 首选，肝素/无抗凝备选。先尝试无抗凝→维持>24h则继续', critical:true },
+          { id:'pre-12', text:'枸橼酸使用前评估肝功能和乳酸', detail:'超急性肝衰(ALT>1000)或心源性休克(乳酸>8)→禁忌RCA', critical:true },
+          { id:'pre-13', text:'肝素使用前评估出血风险和HIT史', detail:'活动性出血、近期手术/创伤、血小板减少、HIT史', critical:true },
+          { id:'pre-14', text:'钙补充液已准备（RCA时）', detail:'10%葡萄糖酸钙或5%氯化钙', critical:true },
+          { id:'pre-14b', text:'枸橼酸蓄积风险评估', detail:'基线总钙/iCa比值、肝功能、乳酸水平记录', critical:false }
+        ]},
+        { name: '处方参数', critical: false, items: [
+          { id:'pre-15', text:'模式已确定', detail:'推荐CVVHD或CVVHDF（非纯CVVH）', critical:false },
+          { id:'pre-16', text:'剂量已处方', detail:'≥20 mL/kg/h，处方25-30以保证交付20-25', critical:false },
+          { id:'pre-17', text:'血流速已设定', detail:'抗凝200, RCA 100-150, 无抗凝250-300 mL/min', critical:false },
+          { id:'pre-18', text:'净超滤目标已设定', detail:'目标1.0-1.75 mL/kg/h', critical:false },
+          { id:'pre-19', text:'置换液/透析液已连接', detail:'RCA用低HCO3-液。优先使用商业化预配液', critical:false },
+          { id:'pre-20', text:'FF<20%已确认', detail:'滤过分数>20%→凝血风险↑', critical:false }
+        ]}
+      ]
+    },
+    'daily-round': {
+      label: '每日评估',
+      categories: [
+        { name: '液体平衡', critical: true, items: [
+          { id:'daily-01', text:'每小时超滤量达标', detail:'净超滤率符合处方，偏差<10%', critical:true },
+          { id:'daily-02', text:'24h 液体平衡评估', detail:'记录总入量、总出量、净平衡', critical:true },
+          { id:'daily-03', text:'容量状态再评估', detail:'查体+超声IVC+肺B线', critical:true }
+        ]},
+        { name: '血管通路', critical: true, items: [
+          { id:'daily-04', text:'导管出口部位检查', detail:'有无红、肿、渗液、压痛', critical:true },
+          { id:'daily-05', text:'导管功能评估', detail:'血流速是否达标、动静脉压是否正常', critical:true }
+        ]},
+        { name: '滤器与管路', critical: false, items: [
+          { id:'daily-06', text:'滤器外观检查', detail:'有无血栓、颜色变化、跨膜压趋势', critical:false },
+          { id:'daily-07', text:'预估滤器剩余寿命', detail:'根据TMP趋势和凝血指标判断', critical:false }
+        ]},
+        { name: '实验室监测', critical: true, items: [
+          { id:'daily-08', text:'血气分析 q6h', detail:'pH、HCO3-、BE、乳酸', critical:true },
+          { id:'daily-09', text:'电解质 q6h', detail:'K+、Na+、Ca2+、P、Mg2+', critical:true },
+          { id:'daily-10', text:'抗凝监测', detail:'RCA: 滤器后iCa q2h+全身iCa q6h', critical:true },
+          { id:'daily-11', text:'血常规、凝血功能', detail:'至少 q12-24h', critical:false }
+        ]},
+        { name: '抗凝调整', critical: false, items: [
+          { id:'daily-12', text:'枸橼酸蓄积筛查', detail:'总钙/iCa>2.5→红旗', critical:true },
+          { id:'daily-13', text:'抗凝方案调整后记录', detail:'调整原因、新的参数', critical:false },
+          { id:'daily-14', text:'滤过分数重新评估', detail:'Qb/Hct变化后重新计算FF<20%', critical:false }
+        ]},
+        { name: '药物剂量', critical: true, items: [
+          { id:'daily-15', text:'抗生素剂量评估', detail:'CKRT清除→亚治疗浓度风险。TDM优先', critical:true },
+          { id:'daily-16', text:'负荷剂量是否充足', detail:'亲水性药需足够负荷量', critical:false }
+        ]}
+      ]
+    },
+    'troubleshooting': {
+      label: '报警排查',
+      categories: [
+        { name: '压力报警', critical: false, items: [
+          { id:'alm-01', text:'动脉端低压报警', detail:'导管动脉端功能障碍', critical:true },
+          { id:'alm-02', text:'静脉端高压报警', detail:'回输端堵塞', critical:true },
+          { id:'alm-03', text:'TMP 逐渐升高', detail:'滤器凝血', critical:true }
+        ]},
+        { name: '安全报警', critical: true, items: [
+          { id:'alm-04', text:'空气报警', detail:'检查管路完整性→排气', critical:true },
+          { id:'alm-05', text:'漏血报警', detail:'立即停止→检查废液颜色', critical:true },
+          { id:'alm-06', text:'平衡报警', detail:'入液/出液>5%偏差', critical:true }
+        ]},
+        { name: '运行问题', critical: false, items: [
+          { id:'alm-07', text:'频繁凝血/滤器寿命短', detail:'检查抗凝→提高Qb→前稀释比例', critical:false },
+          { id:'alm-08', text:'血流量不足', detail:'导管贴壁→调整体位', critical:false },
+          { id:'alm-09', text:'置换液温度异常', detail:'检查加热器设置(38-39°C)', critical:false }
+        ]}
+      ]
+    }
   },
-  'daily-round': {
-    label: '每日评估',
-    categories: [
-      { name: '液体平衡', critical: true, items: [
-        { id:'daily-01', text:'每小时超滤量达标', detail:'净超滤率符合处方，偏差<10%', critical:true },
-        { id:'daily-02', text:'24h 液体平衡评估', detail:'记录总入量、总出量、净平衡', critical:true },
-        { id:'daily-03', text:'容量状态再评估', detail:'查体+超声IVC+肺B线，调整净超滤目标', critical:true }
-      ]},
-      { name: '血管通路', critical: true, items: [
-        { id:'daily-04', text:'导管出口部位检查', detail:'有无红、肿、渗液、压痛', critical:true },
-        { id:'daily-05', text:'导管功能评估', detail:'血流速是否达标、动静脉压是否正常', critical:true }
-      ]},
-      { name: '滤器与管路', critical: false, items: [
-        { id:'daily-06', text:'滤器外观检查', detail:'有无血栓、颜色变化、跨膜压趋势', critical:false },
-        { id:'daily-07', text:'预估滤器剩余寿命', detail:'根据TMP趋势和凝血指标判断是否需要安排更换', critical:false }
-      ]},
-      { name: '实验室监测', critical: true, items: [
-        { id:'daily-08', text:'血气分析 q6h', detail:'pH、HCO3-、BE、乳酸', critical:true },
-        { id:'daily-09', text:'电解质 q6h', detail:'K+、Na+、Ca2+、P、Mg2+', critical:true },
-        { id:'daily-10', text:'抗凝监测', detail:'RCA: 滤器后iCa q2h+全身iCa q6h。肝素: aPTT q6h', critical:true },
-        { id:'daily-11', text:'血常规、凝血功能', detail:'至少 q12-24h', critical:false }
-      ]},
-      { name: '抗凝调整', critical: false, items: [
-        { id:'daily-12', text:'枸橼酸蓄积筛查', detail:'总钙/iCa>2.5→红旗。四项全满足(代酸↑+iCa↓+总钙↑+比值>2.5)→停RCA', critical:true },
-        { id:'daily-13', text:'抗凝方案调整后记录', detail:'调整原因、新的参数、计划复查时间', critical:false },
-        { id:'daily-14', text:'滤过分数重新评估', detail:'Qb/Hct/置换液量变化后重新计算FF，确保<20%', critical:false }
-      ]},
-      { name: '药物剂量', critical: true, items: [
-        { id:'daily-15', text:'抗生素剂量评估', detail:'CKRT清除→亚治疗浓度风险。TDM优先；无TDM时按CKRT清除率调整。尤其关注β-内酰胺类、万古霉素', critical:true },
-        { id:'daily-16', text:'负荷剂量是否充足', detail:'亲水性药(Vd<0.7 L/kg)需足够负荷量=理想体重+液体过负荷估重', critical:false }
-      ]}
-    ]
+  DPMAS: {
+    'pre-initiation': {
+      label: '上机前核查',
+      categories: [
+        { name: '适应证', critical: true, items: [
+          { id:'pre-01', text:'TBil > 200 μmol/L 或肝衰竭', detail:'药物效果不佳、等待肝移植', critical:true },
+          { id:'pre-02', text:'凝血功能评估', detail:'INR、血小板、Fib。INR>3+活动性出血为禁忌', critical:true },
+          { id:'pre-03', text:'血流动力学稳定', detail:'MAP>60 mmHg。极度不稳定为相对禁忌', critical:true }
+        ]},
+        { name: '血管通路', critical: true, items: [
+          { id:'pre-04', text:'双腔透析导管功能正常', detail:'同CRRT导管标准，11-14Fr', critical:true },
+          { id:'pre-05', text:'导管位置确认', detail:'右IJ优先，尖端SVC-RA交界', critical:false }
+        ]},
+        { name: '吸附柱与管路', critical: true, items: [
+          { id:'pre-06', text:'吸附柱已选择', detail:'HA330-II(树脂) + BS330(离子交换)', critical:true },
+          { id:'pre-07', text:'管路已预充', detail:'NS 500mL+肝素预充管路和吸附柱', critical:true },
+          { id:'pre-08', text:'血浆分离器确认', detail:'0.2-0.5μm孔径血浆分离器', critical:false }
+        ]},
+        { name: '抗凝与参数', critical: false, items: [
+          { id:'pre-09', text:'肝素抗凝方案', detail:'首剂2000-3000U, 维持1000-1500U/h, ACT 180-220s', critical:true },
+          { id:'pre-10', text:'Qb设定100-150 mL/min', detail:'血浆分离比例15-20%', critical:false },
+          { id:'pre-11', text:'预计时长2-4h', detail:'单次治疗，吸附柱2-3h饱和', critical:false },
+          { id:'pre-12', text:'基线TBil/DBil已记录', detail:'治疗前后对比评估效果', critical:false }
+        ]}
+      ]
+    },
+    'session-monitoring': {
+      label: '治疗监测',
+      categories: [
+        { name: '生命体征', critical: true, items: [
+          { id:'mon-01', text:'生命体征 q30min', detail:'BP、HR、SpO2、体温', critical:true },
+          { id:'mon-02', text:'低血压预防', detail:'起始Qb慢(80-100)→逐渐提升至目标', critical:false }
+        ]},
+        { name: '抗凝监测', critical: true, items: [
+          { id:'mon-03', text:'ACT q30min', detail:'目标180-220s。肝素剂量高于CRRT', critical:true },
+          { id:'mon-04', text:'血小板 q2-4h', detail:'吸附柱可致血小板减少', critical:true }
+        ]},
+        { name: '吸附效果', critical: false, items: [
+          { id:'mon-05', text:'血浆颜色观察', detail:'治疗后应逐渐变清亮', critical:false },
+          { id:'mon-06', text:'吸附柱压差监测', detail:'压差增大→饱和或凝血→更换吸附柱', critical:false },
+          { id:'mon-07', text:'TBil 复查(治疗后)', detail:'目标单次降幅>30%', critical:false }
+        ]},
+        { name: '并发症', critical: true, items: [
+          { id:'mon-08', text:'出血征象观察', detail:'穿刺点、皮肤、黏膜、引流', critical:true },
+          { id:'mon-09', text:'过敏反应观察', detail:'皮疹、支气管痉挛、低血压', critical:false }
+        ]}
+      ]
+    }
   },
-  'troubleshooting': {
-    label: '报警排查',
-    categories: [
-      { name: '压力报警', critical: false, items: [
-        { id:'alm-01', text:'动脉端低压报警 → 导管动脉端功能障碍', detail:'调头/侧卧→冲洗导管→调换动静脉端→降低Qb→若反复→考虑更换导管', critical:true },
-        { id:'alm-02', text:'静脉端高压报警 → 回输端堵塞', detail:'检查管路是否扭结→确认导管静脉端通畅→冲洗', critical:true },
-        { id:'alm-03', text:'TMP 逐渐升高 → 滤器凝血', detail:'评估抗凝→冲洗滤器→增加血流速→安排更换滤器', critical:true }
-      ]},
-      { name: '安全报警', critical: true, items: [
-        { id:'alm-04', text:'空气报警 (Air Detector)', detail:'检查管路完整性→检查静脉壶液面→排查连接处松动→排气', critical:true },
-        { id:'alm-05', text:'漏血报警 (Blood Leak)', detail:'立即停止→检查废液颜色→确认滤器破膜→更换滤器', critical:true },
-        { id:'alm-06', text:'平衡报警 (Balance Error)', detail:'入液/出液>5%偏差→检查秤上无接触→重新校准→确认液体袋无挤压', critical:true }
-      ]},
-      { name: '运行问题', critical: false, items: [
-        { id:'alm-07', text:'频繁凝血/滤器寿命短(<24h)', detail:'检查抗凝达标→提高Qb→检查前稀释比例→排除导管功能不良', critical:false },
-        { id:'alm-08', text:'血流量不足/频繁抽吸', detail:'导管贴壁→调整体位→必要时更换导管→确认导管无血栓', critical:false },
-        { id:'alm-09', text:'置换液/透析液温度异常', detail:'检查加热器设置(38-39°C)→确认无管路散热→低体温时调高温度', critical:false }
-      ]}
-    ]
+  PE: {
+    'pre-initiation': {
+      label: '上机前核查',
+      categories: [
+        { name: '适应证与评估', critical: true, items: [
+          { id:'pre-01', text:'ASFA I类适应证确认', detail:'TTP/GBS/MG危象/AAV+DAH/Goodpasture/Wilson病', critical:true },
+          { id:'pre-02', text:'血浆容量已计算', detail:'PV=0.065×体重×(1-Hct)', critical:true },
+          { id:'pre-03', text:'置换液已准备', detail:'TTP→FFP; GBS/MG→白蛋白; 混合方案→前2/3白蛋白后1/3 FFP', critical:true },
+          { id:'pre-04', text:'FFP ABO相容', detail:'紧急时A型可用AB型FFP', critical:false }
+        ]},
+        { name: '安全准备', critical: true, items: [
+          { id:'pre-05', text:'知情同意(血液制品)', detail:'已告知输血风险并取得知情同意', critical:true },
+          { id:'pre-06', text:'抗过敏药物准备', detail:'苯海拉明、氢化可的松、肾上腺素(过敏性休克备用)', critical:true },
+          { id:'pre-07', text:'钙补充液准备', detail:'10%葡萄糖酸钙(每3单位FFP补10mL)', critical:true },
+          { id:'pre-08', text:'急救设备到位', detail:'气管插管箱、除颤仪', critical:true }
+        ]},
+        { name: '参数设定', critical: false, items: [
+          { id:'pre-09', text:'Qb 100-150 mL/min', detail:'置换率不超过30-40 mL/min', critical:false },
+          { id:'pre-10', text:'置换液加温器37°C', detail:'预防低体温', critical:false },
+          { id:'pre-11', text:'置换次数与频率', detail:'TTP每日、GBS隔日、MG危象 3-5次/周', critical:false }
+        ]},
+        { name: '基线检查', critical: false, items: [
+          { id:'pre-12', text:'凝血功能基线', detail:'PT/aPTT/Fib/PLT', critical:true },
+          { id:'pre-13', text:'iCa基线', detail:'FFP含枸橼酸→低钙风险', critical:true },
+          { id:'pre-14', text:'生命体征基线', detail:'BP、HR、SpO2、T', critical:false }
+        ]}
+      ]
+    },
+    'session-monitoring': {
+      label: '治疗监测',
+      categories: [
+        { name: '生命体征', critical: true, items: [
+          { id:'mon-01', text:'生命体征 q15min(首小时)', detail:'然后q30min。血压为重点', critical:true },
+          { id:'mon-02', text:'低血压处理预案', detail:'减慢速度、补液、Trendelenburg体位', critical:false }
+        ]},
+        { name: '枸橼酸毒性', critical: true, items: [
+          { id:'mon-03', text:'iCa q1h', detail:'目标正常范围。低钙→补钙+减慢置换速度', critical:true },
+          { id:'mon-04', text:'枸橼酸毒性表现筛查', detail:'口周/肢端麻木、抽搐、QT延长', critical:true }
+        ]},
+        { name: '过敏监测', critical: true, items: [
+          { id:'mon-05', text:'过敏体征 q15min', detail:'皮疹、荨麻疹、喘鸣、低血压', critical:true },
+          { id:'mon-06', text:'置换液温度确认', detail:'37°C预热，防低体温', critical:false }
+        ]},
+        { name: '治疗进度', critical: false, items: [
+          { id:'mon-07', text:'置换量记录', detail:'已置换量 vs 计划置换量', critical:false },
+          { id:'mon-08', text:'剩余时间估算', detail:'按当前流速预计完成时间', critical:false }
+        ]}
+      ]
+    },
+    'complication-watch': {
+      label: '并发症观察',
+      categories: [
+        { name: '出血', critical: true, items: [
+          { id:'comp-01', text:'凝血功能置换后复查', detail:'PT/aPTT/Fib(4-6h恢复)。Fib置换后降50%/24h恢复', critical:true },
+          { id:'comp-02', text:'出血体征', detail:'穿刺点、黏膜、皮肤瘀斑', critical:true }
+        ]},
+        { name: '感染', critical: false, items: [
+          { id:'comp-03', text:'感染体征观察', detail:'TTP长期置换→IVIG消耗→感染风险↑', critical:false },
+          { id:'comp-04', text:'IVIG替代评估', detail:'长期置换者考虑IVIG补充', critical:false }
+        ]},
+        { name: '疗效', critical: false, items: [
+          { id:'comp-05', text:'临床反应评估', detail:'肌力(GBS/MG)、血小板(TTP)、意识状态', critical:false },
+          { id:'comp-06', text:'下次置换计划', detail:'根据疗效调整频率和次数', critical:false }
+        ]}
+      ]
+    }
+  },
+  HP: {
+    'pre-initiation': {
+      label: '上机前核查',
+      categories: [
+        { name: '适应证', critical: true, items: [
+          { id:'pre-01', text:'毒物/药物已确认', detail:'高蛋白结合(>80%)或大Vd(>1 L/kg)', critical:true },
+          { id:'pre-02', text:'摄入时间<6h', detail:'最佳清除窗口。>12h获益有限', critical:true },
+          { id:'pre-03', text:'无特效解毒剂或中毒量巨大', detail:'百草枯、鹅膏毒蕈等', critical:true }
+        ]},
+        { name: '安全评估', critical: true, items: [
+          { id:'pre-04', text:'血小板>50k', detail:'<30k为绝对禁忌', critical:true },
+          { id:'pre-05', text:'无活动性大出血', detail:'颅内出血为绝对禁忌', critical:true },
+          { id:'pre-06', text:'血流动力学稳定', detail:'MAP>60 mmHg', critical:false }
+        ]},
+        { name: '设备准备', critical: false, items: [
+          { id:'pre-07', text:'灌流器已选择', detail:'活性炭(HA230/中毒)或树脂(HA330/HA380/炎症)', critical:true },
+          { id:'pre-08', text:'管路已预充', detail:'NS+肝素预充灌流器和管路', critical:true },
+          { id:'pre-09', text:'肝素准备(高剂量)', detail:'2000-3000U首剂+1000-1500U/h(>CRRT 2-3倍)', critical:true },
+          { id:'pre-10', text:'备用灌流器', detail:'2-3h饱和→需更换。准备2-3个', critical:false }
+        ]}
+      ]
+    },
+    'session-monitoring': {
+      label: '治疗监测',
+      categories: [
+        { name: '抗凝监测', critical: true, items: [
+          { id:'mon-01', text:'ACT q30min', detail:'目标180-220s。活性炭吸附肝素→需高频监测', critical:true },
+          { id:'mon-02', text:'肝素剂量调整', detail:'ACT<180→增加肝素; ACT>220→适度减量', critical:true }
+        ]},
+        { name: '血液监测', critical: true, items: [
+          { id:'mon-03', text:'血小板 q2h', detail:'灌流器吸附血小板。如降至<50k→考虑停止', critical:true },
+          { id:'mon-04', text:'Ca2+/血糖监测', detail:'活性炭可少量吸附', critical:false }
+        ]},
+        { name: '灌流器', critical: false, items: [
+          { id:'mon-05', text:'灌流器压差监测', detail:'压差升高→凝血或饱和→即时更换', critical:true },
+          { id:'mon-06', text:'灌流器更换时机', detail:'2-3h或ACT<目标尽管增加肝素→饱和→换', critical:true },
+          { id:'mon-07', text:'气泡探测器', detail:'管路连接严密→空气栓塞致命！', critical:true }
+        ]},
+        { name: '生命体征', critical: false, items: [
+          { id:'mon-08', text:'生命体征 q30min', detail:'低血压常见(10-20%)。起始慢Qb', critical:false },
+          { id:'mon-09', text:'治疗后12-24h毒物浓度', detail:'评估HP清除效果', critical:false }
+        ]}
+      ]
+    }
   }
 };
 
 let clPhase = 'pre-initiation';
+let clModality = 'CRRT';
 let clChecked = loadState().checklistChecked || {};
+// Migrate old flat keys to modality-prefixed
+if (!loadState()._clMigratedV2) {
+  const migrated = {};
+  for (const [key, val] of Object.entries(clChecked)) {
+    if (key.startsWith('CRRT-') || key.startsWith('DPMAS-') || key.startsWith('PE-') || key.startsWith('HP-')) {
+      migrated[key] = val;
+    } else {
+      migrated['CRRT-' + key] = val;
+    }
+  }
+  clChecked = migrated;
+  saveState({ checklistChecked: clChecked, _clMigratedV2: true });
+}
 
 function renderChecklist() {
+  const data = clData[clModality] || clData['CRRT'];
+  // Update header
+  const header = document.querySelector('#panel-checklist .tool-header h2');
+  if (header) header.textContent = clModality + ' 核查表';
   // Phase tabs
   let tabsHtml = '';
-  for (const [key, val] of Object.entries(clData)) {
+  for (const [key, val] of Object.entries(data)) {
     tabsHtml += `<button class="phase-tab${key === clPhase ? ' active' : ''}" data-phase="${key}">${val.label}</button>`;
   }
   document.getElementById('clPhaseTabs').innerHTML = tabsHtml;
@@ -1455,9 +2458,9 @@ function renderChecklist() {
     });
   });
 
-  const phase = clData[clPhase];
+  const phase = data[clPhase];
   const allIds = [];
-  phase.categories.forEach(cat => cat.items.forEach(item => allIds.push(item.id)));
+  phase.categories.forEach(cat => cat.items.forEach(item => allIds.push(clModality + '-' + item.id)));
 
   const checkedCount = allIds.filter(id => clChecked[id]).length;
   const pct = allIds.length > 0 ? (checkedCount / allIds.length * 100).toFixed(0) : 0;
@@ -1473,11 +2476,12 @@ function renderChecklist() {
   phase.categories.forEach(cat => {
     itemsHtml += `<div class="checklist-category-title">${cat.name}${cat.critical ? ' <span class="critical-badge">关键</span>' : ''}</div>`;
     cat.items.forEach(item => {
-      const checked = clChecked[item.id] ? 'checked' : '';
+      const fullId = clModality + '-' + item.id;
+      const checked = clChecked[fullId] ? 'checked' : '';
       itemsHtml += `
         <div class="checklist-item${item.critical ? ' critical' : ''}">
-          <input type="checkbox" id="${item.id}" ${checked} onchange="toggleCheck('${item.id}')">
-          <label for="${item.id}">
+          <input type="checkbox" id="${fullId}" ${checked} onchange="toggleCheck('${fullId}')">
+          <label for="${fullId}">
             ${item.text}
             ${item.detail ? `<span class="item-detail">${item.detail}</span>` : ''}
           </label>
@@ -1494,14 +2498,15 @@ function toggleCheck(id) {
 }
 
 document.getElementById('clReset').addEventListener('click', () => {
-  const phase = clData[clPhase];
-  phase.categories.forEach(cat => cat.items.forEach(item => { clChecked[item.id] = false; }));
+  const phase = (clData[clModality] || clData['CRRT'])[clPhase];
+  phase.categories.forEach(cat => cat.items.forEach(item => { clChecked[clModality + '-' + item.id] = false; }));
   saveState({ checklistChecked: clChecked });
   renderChecklist();
 });
 
 // ===== Tool 5: CRRT Workflow =====
 const wfState = {
+  modality: 'CRRT',
   step: 1,
   choices: {},
   weight: 65,
@@ -1510,28 +2515,70 @@ const wfState = {
   ph: 7.22,
   hco3: 18,
   map: 60,
-  urineOutput: 'oliguric', // 'oliguric' | 'non-oliguric'
+  urineOutput: 'oliguric',
   fluidOverload: true,
   vasopressor: true,
   liverOk: true,
   lactate: 2.3
 };
 
-const wfSteps = [
-  { id:1, title:'评估 — 是否需要启动CRRT？', emoji:'' },
-  { id:2, title:'选择CRRT模式', emoji:'' },
-  { id:3, title:'计算治疗剂量', emoji:'' },
-  { id:4, title:'设定血流速 (Qb)', emoji:'' },
-  { id:5, title:'配置液体分配', emoji:'' },
-  { id:6, title:'选择抗凝方案', emoji:'' },
-  { id:7, title:'选择置换液/透析液成分', emoji:'' },
-  { id:8, title:'设定液体清除目标', emoji:'' },
-  { id:9, title:'滤过分数安全校验', emoji:'' },
-  { id:10, title:'监测计划与预期时间线', emoji:'' },
-  { id:11, title:'撤机评估', emoji:'' }
-];
+const wfStepsByModality = {
+  CRRT: [
+    { id:1, title:'评估 — 是否需要启动CRRT？' },
+    { id:2, title:'选择CRRT模式' },
+    { id:3, title:'计算治疗剂量' },
+    { id:4, title:'设定血流速 (Qb)' },
+    { id:5, title:'配置液体分配' },
+    { id:6, title:'选择抗凝方案' },
+    { id:7, title:'选择置换液/透析液成分' },
+    { id:8, title:'设定液体清除目标' },
+    { id:9, title:'滤过分数安全校验' },
+    { id:10, title:'监测计划与预期时间线' },
+    { id:11, title:'撤机评估' }
+  ],
+  DPMAS: [
+    { id:1, title:'评估 — DPMAS是否适用？' },
+    { id:2, title:'确认血管通路' },
+    { id:3, title:'设定运行参数' },
+    { id:4, title:'抗凝方案' },
+    { id:5, title:'治疗中监测' },
+    { id:6, title:'结束评估与记录' }
+  ],
+  PE: [
+    { id:1, title:'评估 — PE是否适用？' },
+    { id:2, title:'计算血浆容量与置换量' },
+    { id:3, title:'选择置换液' },
+    { id:4, title:'抗凝与血管通路' },
+    { id:5, title:'治疗中监测' },
+    { id:6, title:'并发症观察' },
+    { id:7, title:'疗程计划与疗效评估' }
+  ],
+  HP: [
+    { id:1, title:'评估 — HP是否适用？' },
+    { id:2, title:'选择灌流器' },
+    { id:3, title:'设定运行参数' },
+    { id:4, title:'抗凝方案(高剂量)' },
+    { id:5, title:'治疗中监测与灌流器更换' }
+  ]
+};
 
 function renderWorkflowStep() {
+  const s = wfState;
+  const mod = s.modality || 'CRRT';
+  const steps = wfStepsByModality[mod] || wfStepsByModality['CRRT'];
+  const stepNum = s.step;
+
+  // Update header
+  const header = document.querySelector('#panel-workflow .tool-header h2');
+  if (header) header.textContent = mod + ' 临床路径';
+
+  // Non-CRRT workflows are simplified
+  if (mod !== 'CRRT') {
+    renderSimpleWorkflow(mod, stepNum, steps);
+    return;
+  }
+
+  // ===== Existing CRRT 11-step workflow =====
   const s = wfState;
   const stepNum = s.step;
   let html = '';
@@ -1905,11 +2952,268 @@ document.getElementById('wfReset').addEventListener('click', () => {
   renderWorkflowStep();
 });
 
-// Step indicator click to jump
+// Step indicator click to jump (works for both CRRT and simple workflows)
 document.getElementById('wfProgress').addEventListener('click', (e) => {
-  const step = e.target.dataset.step;
+  const step = e.target.dataset.step || e.target.closest('[data-step]')?.dataset?.step;
   if (step) { wfState.step = parseInt(step); renderWorkflowStep(); }
 });
+
+// ===== Simple Workflow Renderer (DPMAS, PE, HP) =====
+function renderSimpleWorkflow(mod, stepNum, steps) {
+  const s = wfState;
+  const container = document.getElementById('panel-workflow');
+  if (!container) return;
+
+  // Progress stepper
+  let stepperHtml = '<div class="wf-progress" style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap">';
+  steps.forEach((st, i) => {
+    const cls = i + 1 === stepNum ? 'active' : (i + 1 < stepNum ? 'done' : '');
+    stepperHtml += `<span class="wf-step-dot${cls ? ' ' + cls : ''}" style="display:inline-block;width:28px;height:28px;line-height:28px;text-align:center;border-radius:50%;font-size:0.75rem;${cls === 'active' ? 'background:var(--primary);color:#fff;' : (cls === 'done' ? 'background:var(--accent-green);color:#fff;' : 'background:var(--border);color:var(--text-secondary);')}">${i+1}</span>`;
+    if (i < steps.length - 1) stepperHtml += '<span style="color:var(--border);padding:0 4px">—</span>';
+  });
+  stepperHtml += '</div>';
+
+  let contentHtml = '';
+  const stepTitle = steps[stepNum - 1].title;
+
+  // DPMAS workflow steps
+  if (mod === 'DPMAS') {
+    switch (stepNum) {
+      case 1:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>适应证：</strong>TBil > 200 μmol/L、肝衰竭、脓毒症肝损伤、肝移植桥接。</p>
+        <p><strong>禁忌：</strong>INR>3+活动性出血、极度血流动力学不稳定(MAP<55)、严重血小板减少(<30k)。</p>
+        <div class="wf-highlight-box"><h4>决策要点</h4><p>无凝血障碍→DPMAS首选（省钱、避免输血）。凝血障碍→考虑PE。肝肾综合征→考虑DPMAS+CRRT联合。</p></div>
+        <p><strong>治疗目标：</strong>TBil单次降幅>30%，3-5次/疗程，隔日一次。</p></div>`;
+        break;
+      case 2:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>同CRRT血管通路标准：</strong></p><ul>
+        <li>双腔透析导管 11-14Fr</li><li>右IJ首选 → 股静脉(≥24cm)备选</li><li>确认导管尖端位置(SVC-RA交界)</li><li>血流量可达100-150 mL/min</li></ul>
+        <p>CXR或超声确认导管位置。检查穿刺点无感染/血肿。</p></div>`;
+        break;
+      case 3:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>血流速 (Qb)</td><td>100-150 mL/min</td></tr>
+          <tr><td>血浆分离比例</td><td>15-20% Qb</td></tr>
+          <tr><td>血浆流速</td><td>15-30 mL/min</td></tr>
+          <tr><td>单次时长</td><td>2-4 小时</td></tr>
+          <tr><td>疗程次数</td><td>3-5 次, 隔日一次</td></tr>
+          <tr><td>吸附柱组合</td><td>HA330-II(树脂) + BS330(离子交换)</td></tr></tbody></table>
+        <p style="margin-top:12px"><strong>预充：</strong>NS 500mL + 肝素预充管路和吸附柱，排除气泡。</p></div>`;
+        break;
+      case 4:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>DPMAS使用肝素抗凝（无RCA选项）：</strong></p>
+        <table class="param-ref-table"><tbody>
+          <tr><td>肝素首剂</td><td>2000-3000 U (iv bolus)</td></tr>
+          <tr><td>肝素维持</td><td>1000-1500 U/h</td></tr>
+          <tr><td>ACT目标</td><td>180-220s (q30min监测)</td></tr>
+          <tr><td>aPTT目标</td><td>1.5-2.0×正常值</td></tr></tbody></table>
+        <div class="alert alert-warn" style="margin-top:12px"><strong>注意：</strong>肝素剂量高于CRRT——树脂吸附部分肝素。ACT q30min高频监测。出血高危患者需权衡。</div></div>`;
+        break;
+      case 5:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>治疗中监测项目：</strong></p>
+        <table class="param-ref-table"><tbody>
+          <tr><td>生命体征</td><td>q30min (BP, HR, SpO₂)</td></tr>
+          <tr><td>ACT</td><td>q30min, 目标180-220s</td></tr>
+          <tr><td>凝血功能</td><td>q2-4h (PT/aPTT/Fib)</td></tr>
+          <tr><td>血小板</td><td>q2-4h (警惕吸附性血小板减少)</td></tr>
+          <tr><td>吸附柱压差</td><td>持续观察 (压差↑→饱和或凝血)</td></tr>
+          <tr><td>血浆颜色</td><td>观察是否逐渐变清亮</td></tr>
+        </tbody></table>
+        <p>常见并发症：低血压(10-15%)、出血(5-10%)、血小板减少、过敏反应(<1%)。</p></div>`;
+        break;
+      case 6:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>治疗结束后：</strong></p><ul>
+        <li>复查TBil/DBil（预期单次降幅>30%）</li><li>复查凝血功能、血小板</li><li>评估临床症状改善（黄疸、意识、乏力）</li><li>记录吸附柱使用时间和更换情况</li></ul>
+        <div class="wf-highlight-box"><h4>下一疗程计划</h4><p>通常3-5次/疗程，隔日一次。如TBil降至<100 μmol/L或临床显著好转→考虑停止/减少频次。如效果不佳→评估PE或联合CRRT可能性。</p></div></div>`;
+        break;
+    }
+  }
+
+  // PE workflow steps
+  if (mod === 'PE') {
+    switch (stepNum) {
+      case 1:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>PE关键适应证 (ASFA I类)：</strong>TTP、GBS(重症/进展)、MG危象、AAV+DAH、Goodpasture(非透析依赖)、Wilson病(暴发性+溶血)。</p>
+        <p><strong>核心原则：</strong>PE是桥接治疗——必须联合免疫抑制治疗。PE不根治自身免疫病，仅在等待免疫抑制起效期间(1-2周)控制疾病。</p>
+        <div class="wf-highlight-box"><h4>快速判断</h4><ul><li>自身抗体疾病+TTP/GBS/MG/AAV→PE</li><li>中毒/肝衰竭→选择其他模式(DPMAS/HP)</li><li>AKI为主→CRRT</li></ul></div></div>`;
+        break;
+      case 2:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>血浆容量(PV)计算：</strong></p>
+        <div class="wf-highlight-box"><h4>PV = 0.065 × 体重(kg) × (1 - Hct)</h4></div>
+        <div class="wf-input-group" style="margin:12px 0">
+          <span>体重</span><input type="number" id="peWfWt" value="${s.weight || 70}" min="30" max="200" style="width:80px"><span class="unit">kg</span>
+          <span>Hct</span><input type="number" id="peWfHct" value="${s.hct || 30}" min="15" max="60" style="width:80px"><span class="unit">%</span>
+        </div>
+        <div id="peWfResult" style="padding:8px;background:var(--bg);border-radius:4px;margin-top:8px;font-weight:600"></div>
+        <p style="margin-top:12px"><strong>置换量：</strong>1.0×PV(清除~63%)——标准，1.2×PV(清除~70%)，1.5×PV(清除~78%)——最大推荐。</p>
+        <p><strong>TTP注意：</strong>每日置换(不是隔日)直到血小板>150k×2天。</p></div>`;
+        break;
+      case 3:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>置换液选择原则：</strong></p>
+        <table class="param-ref-table"><tbody>
+          <tr><td>TTP</td><td><strong>FFP</strong> (补充ADAMTS13)</td></tr>
+          <tr><td>GBS/MG/CIDP</td><td><strong>5%白蛋白</strong> (避免FFP过敏/枸橼酸负荷)</td></tr>
+          <tr><td>肝衰竭+凝血障碍</td><td><strong>FFP</strong> (补充凝血因子)</td></tr>
+          <tr><td>Goodpasture/AAV+DAH</td><td>前2/3白蛋白+后1/3 FFP</td></tr>
+        </tbody></table>
+        <div class="alert alert-warn" style="margin-top:12px"><strong>FFP注意事项：</strong>ABO相容。每3单位FFP→补10%葡萄糖酸钙10mL IV。预给抗组胺药(苯海拉明25-50mg)。FFP含~14%枸橼酸→低钙风险！</div></div>`;
+        break;
+      case 4:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>血管通路：</strong>双腔透析导管（同CRRT标准）。少量置换(1-2次)可考虑粗外周静脉。</p>
+        <p><strong>抗凝：</strong></p><ul>
+        <li>膜分离法→肝素(首剂1000-2000U, ACT 180-220s)或无抗凝</li>
+        <li>离心法→枸橼酸(ACD-A)(血库设备)</li></ul>
+        <p><strong>血流速：</strong>100-150 mL/min。置换率不超过30-40 mL/min。</p></div>`;
+        break;
+      case 5:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>生命体征</td><td>q15min(首小时)→q30min</td></tr>
+          <tr><td>iCa</td><td>q1h (FFP置换→枸橼酸毒性风险)</td></tr>
+          <tr><td>过敏体征</td><td>q15min (皮疹/喘鸣/低血压)</td></tr>
+          <tr><td>凝血功能</td><td>置换后(PT/aPTT/Fib/PLT)</td></tr>
+          <tr><td>置换液温度</td><td>37°C加温器</td></tr>
+        </tbody></table>
+        <div class="alert alert-safe" style="margin-top:12px"><strong>关键提醒：</strong>低钙症状(口周麻木、QT延长)→减慢速度+补钙。过敏→抗组胺药+激素。低血压→补液+减慢速度。</div></div>`;
+        break;
+      case 6:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>并发症观察要点：</strong></p><ul>
+        <li>低钙血症(10-20%)——最常见</li><li>过敏反应(3-10%)——FFP相关</li><li>低血压(5-10%)——减慢速度可缓解</li><li>出血(3-5%)——凝血因子消耗</li><li>感染——长期置换IVIG消耗</li></ul>
+        <p><strong>置换后恢复时间：</strong>Fib 50%/24h, PT 4-6h恢复。</p></div>`;
+        break;
+      case 7:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>TTP</td><td>每日置换直到PLT>150k×2天+LDH正常</td></tr>
+          <tr><td>GBS</td><td>5次/10-14天</td></tr>
+          <tr><td>MG危象</td><td>3-5次/7-14天</td></tr>
+          <tr><td>Goodpasture</td><td>每日或隔日×2周</td></tr>
+        </tbody></table>
+        <div class="wf-highlight-box"><h4>疗效评估</h4><p>临床参数(肌力、血小板、意识)→决定是否继续。如+免疫抑制已起效→可逐步延长间隔或停止PE。</p></div></div>`;
+        break;
+    }
+  }
+
+  // HP workflow steps
+  if (mod === 'HP') {
+    switch (stepNum) {
+      case 1:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <p><strong>HP最佳适应证：</strong></p><ul>
+        <li>毒物蛋白结合率>80% (巴比妥、三环类抗抑郁药)</li><li>大分布容积 Vd>1 L/kg</li><li>无特效解毒剂 (百草枯、鹅膏毒蕈)</li><li>摄入<6h (最佳窗口)</li></ul>
+        <p><strong>不适用HP的场景：</strong>低蛋白结合+小Vd毒物→HD/CRRT更合适。摄入>12h且稳定→支持治疗为主。</p>
+        <div class="wf-highlight-box"><h4>关键：时间窗口！</h4><p>摄入<4h→最佳清除效果。4-6h→仍有意义。6-12h→获益递减。>12h→通常不推荐(除非持续吸收)。</p></div></div>`;
+        break;
+      case 2:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>活性炭(HA230)</td><td>广谱毒素吸附。适用：大部分中毒(巴比妥、茶碱、有机磷)</td></tr>
+          <tr><td>树脂(HA330)</td><td>中大分子+炎症介质。适用：脓毒症(可选)、中毒合并炎症</td></tr>
+          <tr><td>树脂(HA380)</td><td>细胞因子特异性。适用：脓毒症炎症风暴(证据低)</td></tr>
+        </tbody></table>
+        <p style="margin-top:12px"><strong>灌流器容量：</strong>150-300mL。预充：NS+肝素。准备2-3个备用（2-3h饱和更换）。</p></div>`;
+        break;
+      case 3:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>血流速 (Qb)</td><td>150-200 mL/min</td></tr>
+          <tr><td>单次时长</td><td>2-3 小时 (灌流器饱和)</td></tr>
+          <tr><td>灌流器更换</td><td>每2-3h, 最多2-3个/次</td></tr>
+          <tr><td>串联HD</td><td>灌流器在前→透析器在后</td></tr>
+        </tbody></table>
+        <p>如合并AKI→HP+HD串联治疗(同时清除毒素和尿毒症毒素)。</p></div>`;
+        break;
+      case 4:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <div class="alert alert-warn"><strong>HP肝素剂量显著高于CRRT！活性炭吸附>50%肝素→需要2-3倍CRRT肝素剂量！</strong></div>
+        <table class="param-ref-table" style="margin-top:12px"><tbody>
+          <tr><td>肝素首剂</td><td>2000-3000 U (iv bolus)</td></tr>
+          <tr><td>肝素维持</td><td>1000-1500 U/h</td></tr>
+          <tr><td>ACT目标</td><td>180-220s</td></tr>
+          <tr><td>ACT监测</td><td>q30min (高频！)</td></tr>
+        </tbody></table>
+        <p style="margin-top:8px">ACT<180→增加肝素；ACT>220→适度减量。出血高危患者权衡风险。</p></div>`;
+        break;
+      case 5:
+        contentHtml = `<div class="card"><h3>${stepTitle}</h3>
+        <table class="param-ref-table"><tbody>
+          <tr><td>ACT</td><td>q30min, 180-220s</td></tr>
+          <tr><td>血小板</td><td>q2h (警惕减少)</td></tr>
+          <tr><td>灌流器压差</td><td>持续观察 (↑→饱和或凝血→更换)</td></tr>
+          <tr><td>气泡探测器</td><td>持续观察 (空气栓塞致命！)</td></tr>
+          <tr><td>生命体征</td><td>q30min (低血压10-20%)</td></tr>
+        </tbody></table>
+        <div class="wf-highlight-box" style="margin-top:12px"><h4>灌流器饱和判断</h4><p>2-3h或ACT<目标尽管加肝素→灌流器吸附饱和→立即更换。继续使用已饱和的灌流器→无效+凝血风险↑。</p></div>
+        <p style="margin-top:8px">治疗后12-24h复查毒物浓度评估HP清除效果。</p></div>`;
+        break;
+    }
+  }
+
+  // Update progress bar
+  const wfProgress = document.getElementById('wfProgress');
+  if (wfProgress) {
+    wfProgress.innerHTML = steps.map((st, i) => {
+      const cls = i + 1 === stepNum ? 'active' : (i + 1 < stepNum ? 'done' : '');
+      return `<div class="wf-step-indicator ${cls}" data-step="${i+1}">${i+1}. ${st.title.substring(0,6)}</div>`;
+    }).join('');
+  }
+
+  // Update content
+  const wfContent = document.getElementById('wfContent');
+  if (wfContent) {
+    wfContent.innerHTML = `
+      ${contentHtml}
+      <div class="wf-nav" style="margin-top:20px">
+        <button class="btn btn-outline" id="wfPrev"${stepNum === 1 ? ' disabled' : ''}>← 上一步</button>
+        <div style="flex:1"></div>
+        <span style="color:var(--text-secondary);font-size:0.85rem;line-height:36px">${stepNum}/${steps.length}</span>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" id="wfNext"${stepNum === steps.length ? ' disabled' : ''}>下一步 →</button>
+      </div>
+    `;
+  }
+
+  // Bind nav buttons
+  const wfPrev = document.getElementById('wfPrev');
+  const wfNext = document.getElementById('wfNext');
+  if (wfPrev) wfPrev.addEventListener('click', () => {
+    wfState.step = Math.max(1, stepNum - 1);
+    renderWorkflowStep();
+  });
+  if (wfNext) wfNext.addEventListener('click', () => {
+    wfState.step = Math.min(steps.length, stepNum + 1);
+    renderWorkflowStep();
+  });
+
+  // PE calculator in workflow
+  if (mod === 'PE' && stepNum === 2) {
+    setTimeout(() => {
+      const wtEl = document.getElementById('peWfWt');
+      const hctEl = document.getElementById('peWfHct');
+      const resultEl = document.getElementById('peWfResult');
+      function updatePEWf() {
+        const wt = parseFloat(wtEl.value) || 70;
+        const hct = parseFloat(hctEl.value) || 30;
+        const pv = (0.065 * wt * (1 - hct / 100)).toFixed(2);
+        if (resultEl) resultEl.textContent = `预估PV = ${pv} L | 1.0×置换 = ${pv} L | 1.2×置换 = ${(pv*1.2).toFixed(2)} L | 1.5×置换 = ${(pv*1.5).toFixed(2)} L`;
+      }
+      if (wtEl) wtEl.addEventListener('input', updatePEWf);
+      if (hctEl) hctEl.addEventListener('input', updatePEWf);
+      updatePEWf();
+    }, 100);
+  }
+}
 
 // ===== Init =====
 function init() {
@@ -1917,6 +3221,20 @@ function init() {
 
   // Theme
   if (state.theme === 'dark') setTheme(true);
+
+  // Level
+  const lvl = state.level || 'basic';
+  setLevel(lvl);
+
+  // Modality
+  if (state.currentModality) {
+    appState.currentModality = state.currentModality;
+    document.querySelectorAll('.modality-bar').forEach(bar => {
+      bar.querySelectorAll('.mod-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = bar.querySelector(`.mod-btn[data-mod="${state.currentModality}"]`);
+      if (activeBtn) activeBtn.classList.add('active');
+    });
+  }
 
   // Tab
   if (state.activeTab && document.querySelector(`.nav-tab[data-tab="${state.activeTab}"]`)) {
@@ -1952,13 +3270,22 @@ function init() {
   renderKBCategories();
   renderKBEntries();
   renderChecklist();
+  renderDecisionWizard();
+  renderCalculatorByModality();
+  bindPEEvents();
 }
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-  const map = { '1':'calculator', '2':'anticoag', '3':'knowledge', '4':'checklist', '5':'workflow' };
+  const map = { '0':'decision', '1':'calculator', '2':'anticoag', '3':'knowledge', '4':'checklist', '5':'workflow' };
   if (e.altKey && map[e.key]) { e.preventDefault(); switchTab(map[e.key]); }
+  if (e.altKey && e.key === 'l') { e.preventDefault(); setLevel(appState.level === 'basic' ? 'advanced' : 'basic'); }
+});
+
+// Level toggle button
+document.getElementById('levelToggle').addEventListener('click', () => {
+  setLevel(appState.level === 'basic' ? 'advanced' : 'basic');
 });
 
 init();
