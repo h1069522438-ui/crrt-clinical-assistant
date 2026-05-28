@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRRT 临床助手</title>
+<style>
+/* ===== CSS Custom Properties ===== */
+:root {
+  --bg: #F5F7FA;
+  --surface: #FFFFFF;
+  --primary: #1A5276;
+  --primary-light: #2980B9;
+  --accent-red: #E74C3C;
+  --accent-green: #27AE60;
+  --accent-amber: #F39C12;
+  --text: #2C3E50;
+  --text-secondary: #7F8C8D;
+  --border: #D5D8DC;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius: 8px;
+  --radius-sm: 4px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "SF Mono", "Consolas", "Courier New", monospace;
+}
+[data-theme="dark"] {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --primary: #3498db;
+  --primary-light: #5dade2;
+  --accent-red: #e74c3c;
+  --accent-green: #2ecc71;
+  --accent-amber: #f1c40f;
+  --text: #ecf0f1;
+  --text-secondary: #95a5a6;
+  --border: #2c3e50;
+  --shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  padding-top: 60px;
+}
+h2 { color: var(--primary); font-size: 1.4rem; margin-bottom: 16px; }
+h3 { color: var(--primary); font-size: 1.1rem; margin-bottom: 12px; }
+h4 { font-size: 0.95rem; margin-bottom: 8px; color: var(--text); }
+
+/* ===== Navigation ===== */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 20px; height: 54px;
+  box-shadow: var(--shadow);
+}
+.navbar-brand {
+  font-weight: 700; font-size: 1.1rem; color: var(--primary);
+  margin-right: 32px; white-space: nowrap;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-tabs { display: flex; gap: 4px; flex: 1; }
+.nav-tab {
+  padding: 8px 18px; border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer; font-size: 0.9rem;
+  font-family: var(--font); border-radius: var(--radius-sm);
+  transition: all 0.15s; white-space: nowrap;
+}
+.nav-tab:hover { background: var(--bg); color: var(--text); }
+.nav-tab.active { background: var(--primary); color: #fff; }
+.nav-right { display: flex; align-items: center; gap: 8px; margin-left: 16px; }
+.theme-btn {
+  width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 50%;
+  background: var(--surface); cursor: pointer; font-size: 1.1rem;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text); transition: all 0.15s;
+}
+.theme-btn:hover { background: var(--bg); }
+
+/* ===== Layout ===== */
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.tool-panel { display: none; }
+.tool-panel.active { display: block; }
+.tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 900px) { .tool-grid { grid-template-columns: 1fr; } }
+
+/* ===== Cards ===== */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+}
+
+/* ===== Form Elements ===== */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block; font-size: 0.85rem; font-weight: 600;
+  color: var(--text-secondary); margin-bottom: 4px;
+}
+.form-group .unit { font-weight: 400; color: var(--text-secondary); }
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+input[type="number"], select {
+  width: 100%; height: 40px; padding: 8px 12px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text);
+  font-size: 0.95rem; font-family: var(--font);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input[type="number"]:focus, select:focus {
+  outline: none; border-color: var(--primary-light);
+  box-shadow: 0 0 0 2px rgba(41,128,185,0.2);
+}
+input[type="range"] { width: 100%; accent-color: var(--primary); }
+.range-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); }
+
+/* ===== Buttons ===== */
+.btn {
+  padding: 8px 20px; border: none; border-radius: var(--radius-sm);
+  font-size: 0.9rem; font-family: var(--font); cursor: pointer;
+  transition: all 0.15s; height: 36px; font-weight: 500;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-light); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-outline:hover { background: var(--bg); }
+.btn-sm { padding: 4px 12px; height: 28px; font-size: 0.8rem; }
+
+/* ===== Results ===== */
+.result-value {
+  font-size: 1.8rem; font-weight: 700; font-family: var(--mono);
+  color: var(--primary);
+}
+.result-label { font-size: 0.85rem; color: var(--text-secondary); }
+.result-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.result-row:last-child { border-bottom: none; }
+
+/* ===== Alerts ===== */
+.alert { padding: 12px 16px; border-radius: var(--radius-sm); margin: 12px 0; font-size: 0.9rem; }
+.alert-safe { background: #eafaf1; border-left: 4px solid var(--accent-green); color: #1e8449; }
+.alert-warn { background: #fef9e7; border-left: 4px solid var(--accent-amber); color: #7d6608; }
+.alert-danger { background: #fdedec; border-left: 4px solid var(--accent-red); color: #922b21; }
+[data-theme="dark"] .alert-safe { background: #1a3a2a; color: #82e0aa; }
+[data-theme="dark"] .alert-warn { background: #3a2e0a; color: #f9e79f; }
+[data-theme="dark"] .alert-danger { background: #3a1a1a; color: #f1948a; }
+
+/* ===== FF Gauge ===== */
+.ff-gauge { margin: 16px 0; }
+.ff-gauge-bar {
+  height: 12px; border-radius: 6px; background: #e0e0e0;
+  position: relative; overflow: hidden;
+}
+.ff-gauge-fill {
+  height: 100%; border-radius: 6px; transition: width 0.3s, background 0.3s;
+  position: absolute; left: 0; top: 0;
+}
+.ff-gauge-marks {
+  display: flex; justify-content: space-between; font-size: 0.75rem;
+  color: var(--text-secondary); margin-top: 4px;
+}
+.ff-gauge-needle {
+  position: absolute; top: -4px; width: 3px; height: 20px;
+  background: var(--text); border-radius: 2px; transition: left 0.3s;
+}
+
+/* ===== Sub-tabs ===== */
+.sub-tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+.sub-tab {
+  padding: 8px 20px; border: none; background: transparent;
+  color: var(--text-secondary); cursor: pointer; font-size: 0.9rem;
+  font-family: var(--font); border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all 0.15s;
+}
+.sub-tab:hover { color: var(--text); }
+.sub-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+/* ===== Knowledge Base ===== */
+.kb-layout { display: grid; grid-template-columns: 220px 1fr; gap: 24px; }
+@media (max-width: 768px) { .kb-layout { grid-template-columns: 1fr; } }
+.kb-sidebar { position: sticky; top: 70px; align-self: start; }
+.kb-category {
+  display: block; width: 100%; text-align: left; padding: 8px 12px;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 0.85rem; color: var(--text-secondary); border-radius: var(--radius-sm);
+  font-family: var(--font); transition: all 0.1s;
+}
+.kb-category:hover { background: var(--bg); color: var(--text); }
+.kb-category.active { background: var(--primary); color: #fff; }
+.kb-search { margin-bottom: 12px; }
+.kb-entry {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 8px;
+  box-shadow: var(--shadow);
+}
+.kb-entry-header {
+  padding: 14px 16px; cursor: pointer; display: flex;
+  justify-content: space-between; align-items: center;
+  user-select: none;
+}
+.kb-entry-header:hover { background: var(--bg); }
+.kb-entry-title { font-weight: 600; font-size: 0.95rem; flex: 1; }
+.kb-entry-meta { display: flex; gap: 8px; align-items: center; }
+.kb-entry-body { display: none; padding: 0 16px 16px; font-size: 0.9rem; line-height: 1.7; }
+.kb-entry.open .kb-entry-body { display: block; }
+.kb-entry-body p { margin-bottom: 8px; }
+.kb-entry-body ul, .kb-entry-body ol { padding-left: 20px; margin-bottom: 8px; }
+.kb-entry-body table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.85rem; }
+.kb-entry-body th, .kb-entry-body td { padding: 6px 10px; border: 1px solid var(--border); text-align: left; }
+.kb-entry-body th { background: var(--primary); color: #fff; }
+.bookmark-btn {
+  background: none; border: none; cursor: pointer; font-size: 1.2rem;
+  color: var(--text-secondary); padding: 2px 6px; transition: color 0.15s;
+}
+.bookmark-btn.bookmarked { color: var(--accent-amber); }
+.pearl {
+  background: #eaf2f8; border-left: 4px solid var(--primary);
+  padding: 10px 14px; margin: 12px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.9rem;
+}
+[data-theme="dark"] .pearl { background: #1a2a3a; }
+
+/* ===== Checklist ===== */
+.checklist-phase-tabs { display: flex; gap: 0; margin-bottom: 20px; }
+.phase-tab {
+  flex: 1; padding: 10px; border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; font-family: var(--font); font-size: 0.9rem; text-align: center;
+  transition: all 0.15s;
+}
+.phase-tab:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.phase-tab:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.phase-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.checklist-progress {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+}
+.progress-bar {
+  flex: 1; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;
+}
+.progress-fill { height: 100%; background: var(--accent-green); transition: width 0.3s; border-radius: 4px; }
+.progress-text { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; }
+.checklist-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  border-bottom: 1px solid var(--border); transition: background 0.1s;
+}
+.checklist-item:hover { background: var(--bg); }
+.checklist-item.critical { border-left: 4px solid var(--accent-red); padding-left: 8px; }
+.checklist-item input[type="checkbox"] {
+  width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; accent-color: var(--primary); cursor: pointer;
+}
+.checklist-item label { flex: 1; cursor: pointer; font-size: 0.9rem; }
+.checklist-item .item-detail { font-size: 0.8rem; color: var(--text-secondary); display: block; margin-top: 2px; }
+.checklist-category-title {
+  font-weight: 600; color: var(--primary); font-size: 0.9rem;
+  padding: 8px 12px; background: var(--bg); border-radius: var(--radius-sm);
+  margin: 12px 0 8px;
+}
+.critical-badge {
+  display: inline-block; background: var(--accent-red); color: #fff;
+  font-size: 0.7rem; padding: 1px 6px; border-radius: 3px; font-weight: 700;
+}
+.troubleshoot-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.troubleshoot-table th, .troubleshoot-table td {
+  padding: 8px 12px; border: 1px solid var(--border); text-align: left;
+}
+.troubleshoot-table th { background: var(--primary); color: #fff; }
+.troubleshoot-table tbody tr:hover { background: var(--bg); }
+
+/* ===== Anticoagulation specific ===== */
+.adj-matrix { margin: 16px 0; }
+.adj-matrix table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.adj-matrix th, .adj-matrix td { padding: 8px 10px; border: 1px solid var(--border); text-align: center; }
+.adj-matrix th { background: var(--primary); color: #fff; font-weight: 500; }
+.adj-matrix td.highlight { background: #eaf2f8; font-weight: 700; }
+[data-theme="dark"] .adj-matrix td.highlight { background: #1a3a5a; }
+.adj-matrix .axis-label { font-weight: 600; background: #e8e8e8; }
+[data-theme="dark"] .adj-matrix .axis-label { background: #2a2a3a; }
+
+/* ===== Footer / Disclaimer ===== */
+.disclaimer {
+  text-align: center; padding: 20px; font-size: 0.8rem; color: var(--text-secondary);
+  border-top: 1px solid var(--border); margin-top: 32px;
+}
+.tool-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.tool-header h2 { margin-bottom: 0; }
+
+/* ===== Workflow ===== */
+.wf-progress {
+  display: flex; gap: 0; margin-bottom: 24px; overflow-x: auto;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface);
+}
+.wf-step-indicator {
+  flex: 1; min-width: 60px; text-align: center; padding: 10px 6px;
+  font-size: 0.75rem; color: var(--text-secondary); position: relative;
+  cursor: pointer; transition: all 0.2s; border-right: 1px solid var(--border);
+  font-family: var(--font); white-space: nowrap;
+}
+.wf-step-indicator:last-child { border-right: none; }
+.wf-step-indicator.active { background: var(--primary); color: #fff; font-weight: 700; }
+.wf-step-indicator.done { background: #eafaf1; color: var(--accent-green); }
+[data-theme="dark"] .wf-step-indicator.done { background: #1a3a2a; }
+.wf-step-indicator.done::after { content: ' ✓'; }
+.wf-content { min-height: 350px; }
+.wf-nav { display: flex; gap: 12px; margin-top: 20px; align-items: center; }
+.wf-choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
+@media (max-width: 700px) { .wf-choice-grid { grid-template-columns: 1fr; } }
+.wf-choice {
+  background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: all 0.15s; text-align: left;
+  font-family: var(--font);
+}
+.wf-choice:hover { border-color: var(--primary-light); box-shadow: 0 0 0 2px rgba(41,128,185,0.15); }
+.wf-choice.selected { border-color: var(--primary); background: #eaf2f8; }
+[data-theme="dark"] .wf-choice.selected { background: #1a2a3a; }
+.wf-choice-title { font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 4px; }
+.wf-choice-desc { font-size: 0.85rem; color: var(--text-secondary); }
+.wf-result-box {
+  background: var(--bg); border-radius: var(--radius); padding: 16px; margin: 12px 0;
+}
+.wf-result-box table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.wf-result-box td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.wf-result-box td:first-child { font-weight: 600; color: var(--text-secondary); width: 40%; }
+.wf-result-box td:last-child { font-family: var(--mono); color: var(--text); }
+.wf-timeline { margin: 16px 0; }
+.wf-timeline-item {
+  display: flex; gap: 12px; padding: 10px 0; border-left: 3px solid var(--primary);
+  padding-left: 16px; margin-left: 8px; position: relative;
+}
+.wf-timeline-item::before {
+  content: ''; position: absolute; left: -7px; top: 16px;
+  width: 11px; height: 11px; border-radius: 50%; background: var(--primary);
+}
+.wf-timeline-time { font-weight: 700; color: var(--primary); min-width: 70px; font-size: 0.9rem; }
+.wf-timeline-body { font-size: 0.9rem; }
+.wf-highlight-box {
+  background: #eaf2f8; border-left: 4px solid var(--primary);
+  padding: 12px 16px; margin: 12px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+[data-theme="dark"] .wf-highlight-box { background: #1a2a3a; }
+.wf-highlight-box h4 { color: var(--primary); margin-bottom: 4px; }
+.wf-input-group { display: flex; gap: 8px; align-items: center; }
+.wf-input-group input { width: 100px; }
+.wf-input-group .unit { color: var(--text-secondary); font-size: 0.85rem; }
+
+/* ===== Print ===== */
+@media print {
+  .navbar, .nav-right, .btn, .bookmark-btn, .theme-btn, .disclaimer, .kb-sidebar, .sub-tabs, .checklist-phase-tabs { display: none !important; }
+  body { padding-top: 0; background: #fff; }
+  .tool-panel:not(.active) { display: none !important; }
+  .tool-grid { grid-template-columns: 1fr; }
+  .card { box-shadow: none; border: 1px solid #ccc; break-inside: avoid; }
+  .kb-entry-body { display: block !important; }
+  .kb-entry { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Navigation ===== -->
+<nav class="navbar">
+  <div class="navbar-brand">CRRT 临床助手</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-tab="calculator">处方计算</button>
+    <button class="nav-tab" data-tab="anticoag">抗凝调整</button>
+    <button class="nav-tab" data-tab="knowledge">知识库</button>
+    <button class="nav-tab" data-tab="checklist">核查表</button>
+    <button class="nav-tab" data-tab="workflow">工作流</button>
+  </div>
+  <div class="nav-right">
+    <button class="theme-btn" id="themeToggle" title="切换深色/浅色模式">🌙</button>
+  </div>
+</nav>
+
+<div class="container">
+
+<!-- ===== Tool 1: CRRT Prescription Calculator ===== -->
+<section class="tool-panel active" id="panel-calculator">
+  <div class="tool-header">
+    <h2>CRRT 处方计算器</h2>
+    <button class="btn btn-outline btn-sm" id="calcReset">重置</button>
+  </div>
+  <div class="tool-grid">
+    <!-- Inputs -->
+    <div>
+      <div class="card">
+        <h3>患者参数</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>体重 <span class="unit">kg</span></label>
+            <input type="number" id="calcWeight" value="70" min="30" max="200" step="0.1">
+          </div>
+          <div class="form-group">
+            <label>红细胞压积 <span class="unit">%</span></label>
+            <input type="number" id="calcHct" value="30" min="15" max="60" step="0.5">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>CRRT 模式</label>
+          <select id="calcMode">
+            <option value="CVVHDF" selected>CVVHDF（血液透析滤过）</option>
+            <option value="CVVH">CVVH（血液滤过）</option>
+            <option value="CVVHD">CVVHD（血液透析）</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <h3>剂量设置</h3>
+        <div class="form-group">
+          <label>目标剂量 <span class="unit">mL/kg/h</span></label>
+          <input type="range" id="calcDose" value="25" min="20" max="35" step="1">
+          <div class="range-labels"><span>20</span><span>25</span><span>30</span><span>35</span></div>
+        </div>
+        <div class="form-group" id="hdfRatioGroup">
+          <label>置换液比例 <span class="unit">%（CVVHDF 中置换液占总废液比例）</span></label>
+          <input type="range" id="calcHdfRatio" value="50" min="10" max="90" step="5">
+          <div class="range-labels"><span>10%</span><span>50%</span><span>90%</span></div>
+        </div>
+        <div class="form-group">
+          <label>前稀释比例 <span class="unit">%</span></label>
+          <input type="range" id="calcPreDilution" value="50" min="0" max="100" step="5">
+          <div class="range-labels"><span>0%（纯后稀释）</span><span>50%</span><span>100%（纯前稀释）</span></div>
+        </div>
+        <div class="form-group">
+          <label>净超滤目标 <span class="unit">mL/h</span></label>
+          <input type="number" id="calcNetUF" value="100" min="0" max="500" step="10">
+        </div>
+      </div>
+      <div class="card">
+        <h3>血流速</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>推荐血流速 <span class="unit">mL/min</span></label>
+            <input type="number" id="calcQb" value="" min="50" max="400" step="10" style="font-weight:700;color:var(--primary);">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-outline" id="calcUseRecommended" style="width:100%;height:40px;">使用推荐值</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Results -->
+    <div>
+      <div class="card" id="resultsCard">
+        <h3>计算结果</h3>
+        <div id="calcResults">
+          <div style="text-align:center;padding:40px;color:var(--text-secondary);">请先输入参数</div>
+        </div>
+      </div>
+      <div class="card" id="ffCard" style="display:none;">
+        <h3>滤过分数 (Filtration Fraction)</h3>
+        <div class="ff-gauge">
+          <div class="ff-gauge-bar" style="position:relative;height:16px;">
+            <div class="ff-gauge-fill" id="ffFill" style="width:0;"></div>
+          </div>
+          <div class="ff-gauge-marks">
+            <span>0%</span><span style="color:var(--accent-green);">20%</span><span style="color:var(--accent-amber);">25%</span><span style="color:var(--accent-red);">30%+</span>
+          </div>
+        </div>
+        <div id="ffAlert"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tool 2: Anticoagulation Dosing ===== -->
+<section class="tool-panel" id="panel-anticoag">
+  <div class="tool-header">
+    <h2>抗凝方案调整</h2>
+    <button class="btn btn-outline btn-sm" id="acReset">重置</button>
+  </div>
+  <div class="sub-tabs">
+    <button class="sub-tab active" data-sub="citrate">枸橼酸 (RCA)</button>
+    <button class="sub-tab" data-sub="heparin">肝素 (Heparin)</button>
+  </div>
+  <!-- Citrate Panel -->
+  <div class="tool-grid" id="acCitratePanel">
+    <div>
+      <div class="card">
+        <h3>枸橼酸抗凝参数</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>血流速 Qb <span class="unit">mL/min</span></label>
+            <input type="number" id="citQb" value="200" min="50" max="400" step="10">
+          </div>
+          <div class="form-group">
+            <label>枸橼酸类型</label>
+            <select id="citType">
+              <option value="tsc" selected>4% 枸橼酸钠 (TSC, ~136 mmol/L)</option>
+              <option value="acda">ACD-A (~113 mmol/L)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>目标滤器后 iCa <span class="unit">mmol/L</span></label>
+            <input type="number" id="citTargetPostCa" value="0.35" min="0.2" max="0.5" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>钙补充剂</label>
+            <select id="citCaForm">
+              <option value="gluconate" selected>10% 葡萄糖酸钙</option>
+              <option value="chloride">5% 氯化钙</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>当前监测值</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>当前滤器后 iCa <span class="unit">mmol/L</span></label>
+            <input type="number" id="citCurPostCa" value="0.30" min="0.1" max="0.8" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>当前全身 iCa <span class="unit">mmol/L</span></label>
+            <input type="number" id="citCurSysCa" value="1.15" min="0.5" max="1.8" step="0.01">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="citResultsCard">
+        <h3>计算结果与建议</h3>
+        <div id="citResults"></div>
+      </div>
+      <div class="card">
+        <h3>调整矩阵参考</h3>
+        <div class="adj-matrix">
+          <table>
+            <tr><th></th><th>滤器后 iCa &gt;0.5</th><th>滤器后 0.25-0.5</th><th>滤器后 &lt;0.25</th></tr>
+            <tr><td class="axis-label">全身 &lt;1.0</td><td>枸↑+钙↑</td><td>钙↑10%</td><td>枸↓+钙↑</td></tr>
+            <tr><td class="axis-label">全身 1.0-1.3</td><td>枸↑</td><td class="highlight">不变</td><td>枸↓</td></tr>
+            <tr><td class="axis-label">全身 &gt;1.3</td><td>钙↓10%</td><td>钙↓10%</td><td>枸↓+钙↓</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3>UpToDate 起始方案 (CVVHD + 4%枸橼酸钠)</h3>
+        <table style="width:100%;font-size:0.85rem;">
+          <tr><th>体重 (kg)</th><th>Qb (mL/min)</th><th>透析液 (mL/h)</th><th>4%枸橼酸 (mL/h)</th><th>钙剂 (mL/h)*</th></tr>
+          <tr><td>&lt;60</td><td>80</td><td>1500</td><td>140</td><td>38</td></tr>
+          <tr><td>60-90</td><td>100</td><td>2000</td><td>170</td><td>50</td></tr>
+          <tr><td>&gt;90</td><td>120</td><td>2500</td><td>205</td><td>65</td></tr>
+        </table>
+        <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;">*钙剂浓度91 mmol/L。枸橼酸浓度136 mmol/L。来源: Morgera S et al. Crit Care Med 2009.</p>
+      </div>
+    </div>
+  </div>
+  <!-- Heparin Panel -->
+  <div class="tool-grid" id="acHeparinPanel" style="display:none;">
+    <div>
+      <div class="card">
+        <h3>肝素抗凝参数</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>体重 <span class="unit">kg</span></label>
+            <input type="number" id="hepWeight" value="70" min="30" max="200" step="0.1">
+          </div>
+          <div class="form-group">
+            <label>当前 aPTT <span class="unit">秒</span></label>
+            <input type="number" id="hepAPTT" value="45" min="20" max="200" step="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>首剂负荷量 <span class="unit">U/kg</span></label>
+            <input type="number" id="hepBolusDose" value="800" min="0" max="5000" step="100">
+          </div>
+          <div class="form-group">
+            <label>维持剂量 <span class="unit">U/kg/h</span></label>
+            <input type="number" id="hepMaintDose" value="500" min="0" max="2500" step="50">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="hepResultsCard">
+        <h3>计算结果与建议</h3>
+        <div id="hepResults"></div>
+      </div>
+      <div class="card">
+        <h3>肝素 aPTT 调整表</h3>
+        <table style="width:100%;font-size:0.85rem;">
+          <tr><th>aPTT (秒)</th><th>追加负荷</th><th>速率调整</th><th>复查时间</th></tr>
+          <tr><td>&lt; 35</td><td>追加原负荷量</td><td>+100 U/h</td><td>4 小时</td></tr>
+          <tr><td>35-44</td><td>无</td><td>+50 U/h</td><td>4 小时</td></tr>
+          <tr><td style="font-weight:700;background:#eafaf1;">45-55（靶 aPTTr 1.5）</td><td style="background:#eafaf1;">无</td><td style="background:#eafaf1;">不变</td><td style="background:#eafaf1;">6 小时</td></tr>
+          <tr><td>56-70</td><td>无</td><td>-50 U/h</td><td>4 小时</td></tr>
+          <tr><td>&gt; 70</td><td>暂停30-60min</td><td>重启 -100 U/h</td><td>重启后 2 小时</td></tr>
+        </table>
+        <p style="font-size:0.75rem;color:var(--text-secondary);margin-top:8px;">DIC或血小板减少患者应减量。目标aPTT 45秒或aPTTr 1.5。来源: UpToDate 2026.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Tool 3: Knowledge Base ===== -->
+<section class="tool-panel" id="panel-knowledge">
+  <div class="tool-header">
+    <h2>CRRT 知识库</h2>
+    <button class="btn btn-outline btn-sm" id="kbShowBookmarked">仅显示收藏</button>
+  </div>
+  <div class="kb-layout">
+    <div class="kb-sidebar">
+      <div class="kb-search">
+        <input type="text" id="kbSearch" placeholder="搜索..." style="width:100%;">
+      </div>
+      <div id="kbCategories"></div>
+    </div>
+    <div id="kbEntries"></div>
+  </div>
+</section>
+
+<!-- ===== Tool 4: CRRT Checklist ===== -->
+<section class="tool-panel" id="panel-checklist">
+  <div class="tool-header">
+    <h2>CRRT 核查表</h2>
+    <button class="btn btn-outline btn-sm" id="clReset">重置当前阶段</button>
+  </div>
+  <div class="checklist-phase-tabs" id="clPhaseTabs"></div>
+  <div id="clProgress"></div>
+  <div id="clItems"></div>
+</section>
+
+<!-- ===== Tool 5: CRRT Workflow ===== -->
+<section class="tool-panel" id="panel-workflow">
+  <div class="tool-header">
+    <h2>CRRT 决策到撤机全流程</h2>
+    <button class="btn btn-outline btn-sm" id="wfReset">重新开始</button>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="wf-progress" id="wfProgress">
+    <div class="wf-step-indicator active" data-step="1">1.评估</div>
+    <div class="wf-step-indicator" data-step="2">2.模式</div>
+    <div class="wf-step-indicator" data-step="3">3.剂量</div>
+    <div class="wf-step-indicator" data-step="4">4.血流</div>
+    <div class="wf-step-indicator" data-step="5">5.分配</div>
+    <div class="wf-step-indicator" data-step="6">6.抗凝</div>
+    <div class="wf-step-indicator" data-step="7">7.溶液</div>
+    <div class="wf-step-indicator" data-step="8">8.超滤</div>
+    <div class="wf-step-indicator" data-step="9">9.FF</div>
+    <div class="wf-step-indicator" data-step="10">10.监测</div>
+    <div class="wf-step-indicator" data-step="11">11.撤机</div>
+  </div>
+
+  <!-- Step Content -->
+  <div class="wf-content" id="wfContent">
+    <div class="card">
+      <h3>加载中...</h3>
+    </div>
+  </div>
+
+  <!-- Navigation Buttons -->
+  <div class="wf-nav">
+    <button class="btn btn-outline" id="wfPrev" style="display:none;">← 上一步</button>
+    <div style="flex:1;"></div>
+    <button class="btn btn-primary" id="wfNext">开始 →</button>
+  </div>
+</section>
+
+<!-- ===== Disclaimer ===== -->
+<div class="disclaimer">
+  <p>本工具仅供教育辅助和临床参考，不构成医疗建议。所有治疗决策应结合患者具体情况、当地指南和临床判断。</p>
+  <p>CRRT Clinical Assistant v1.0 | 离线可用 | 数据仅保存在本地浏览器</p>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ===== App State =====
+const LS_KEY = 'crrt_assistant_state';
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; }
+  catch(e) { return {}; }
+}
+function saveState(partial) {
+  const s = loadState();
+  Object.assign(s, partial);
+  localStorage.setItem(LS_KEY, JSON.stringify(s));
+}
+
+// ===== Navigation =====
+function switchTab(tabId) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.nav-tab[data-tab="${tabId}"]`).classList.add('active');
+  document.getElementById(`panel-${tabId}`).classList.add('active');
+  saveState({ activeTab: tabId });
+}
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+});
+
+// Theme toggle
+const themeBtn = document.getElementById('themeToggle');
+function setTheme(dark) {
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  themeBtn.textContent = dark ? '☀️' : '🌙';
+  saveState({ theme: dark ? 'dark' : 'light' });
+}
+themeBtn.addEventListener('click', () => {
+  setTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+});
+
+// ===== Tool 1: Prescription Calculator =====
+const calcInputs = ['calcWeight','calcHct','calcMode','calcDose','calcHdfRatio','calcPreDilution','calcNetUF','calcQb'];
+const calcEls = {};
+calcInputs.forEach(id => { calcEls[id] = document.getElementById(id); });
+
+function getCalcInputs() {
+  return {
+    weight: parseFloat(calcEls.calcWeight.value) || 70,
+    hct: parseFloat(calcEls.calcHct.value) || 30,
+    mode: calcEls.calcMode.value,
+    dose: parseInt(calcEls.calcDose.value),
+    hdfRatio: parseInt(calcEls.calcHdfRatio.value) / 100,
+    preDilution: parseInt(calcEls.calcPreDilution.value) / 100,
+    netUF: parseFloat(calcEls.calcNetUF.value) || 0,
+    qbOverride: calcEls.calcQb.value ? parseFloat(calcEls.calcQb.value) : null
+  };
+}
+
+function recommendQb(mode) {
+  // UpToDate recommended Qb: general anticoagulation 200, RCA 100-150, no AC 250-300
+  // Mode-specific: CVVHD ≥2.5x dialysate, CVVH(post) ≥5x replacement, CVVH(pre) ≥6x replacement
+  const map = { CVVH: 250, CVVHD: 200, CVVHDF: 220 };
+  return map[mode] || 200;
+}
+
+function calculatePrescription() {
+  const inp = getCalcInputs();
+  const qb = inp.qbOverride || recommendQb(inp.mode);
+  if (!inp.qbOverride) calcEls.calcQb.value = qb;
+
+  // Effluent rate
+  const qeffH = inp.dose * inp.weight; // mL/h
+  const qeffM = qeffH / 60; // mL/min
+
+  // Fluid splits per mode
+  let qrep = 0, qdial = 0;
+  if (inp.mode === 'CVVH') { qrep = qeffH; qdial = 0; }
+  else if (inp.mode === 'CVVHD') { qrep = 0; qdial = qeffH; }
+  else if (inp.mode === 'CVVHDF') { qrep = qeffH * inp.hdfRatio; qdial = qeffH * (1 - inp.hdfRatio); }
+
+  const qrepPre = qrep * inp.preDilution;
+  const qrepPost = qrep * (1 - inp.preDilution);
+
+  // Plasma water flow rate
+  const qp = qb * 60 * (1 - inp.hct / 100); // mL/h
+  // Total ultrafiltration
+  const quf = qrepPost + qrepPre + inp.netUF;
+  // Filtration fraction (with pre-dilution correction)
+  const ff = qp + qrepPre > 0 ? (quf / (qp + qrepPre)) * 100 : 0;
+  // Pre-dilution correction factor
+  const dilFactor = qp + qrepPre > 0 ? qp / (qp + qrepPre) : 1;
+  const correctedDose = inp.dose * dilFactor;
+
+  let ffStatus, ffClass, ffMsg;
+  if (ff < 20) { ffStatus = 'safe'; ffClass = 'alert-safe'; ffMsg = '滤过分数在安全范围，滤器凝血风险低。'; }
+  else if (ff <= 25) { ffStatus = 'warning'; ffClass = 'alert-warn'; ffMsg = '滤过分数偏高，建议增加血流速或降低置换液量以降低凝血风险。'; }
+  else { ffStatus = 'danger'; ffClass = 'alert-danger'; ffMsg = '滤过分数过高！滤器凝血风险显著增加。请立即增加血流速或降低置换液/超滤量。'; }
+
+  return { qb, qeffH, qeffM, qrep, qdial, qrepPre, qrepPost, ff, ffStatus, ffClass, ffMsg, dilFactor, correctedDose, qp, quf, inp };
+}
+
+function renderResults(r) {
+  const html = `
+    <div class="result-row"><span class="result-label">废液速率</span><span><span class="result-value">${r.qeffM.toFixed(1)}</span> mL/min (${r.qeffH.toFixed(1)} mL/h)</span></div>
+    <div class="result-row"><span class="result-label">血流速 Qb</span><span><span class="result-value">${r.qb}</span> mL/min</span></div>
+    <div class="result-row"><span class="result-label">血浆水流量 Qp</span><span>${r.qp.toFixed(0)} mL/h</span></div>
+    ${r.qrep > 0 ? `<div class="result-row"><span class="result-label">置换液总速率</span><span><span class="result-value">${(r.qrep/1000).toFixed(2)}</span> L/h (${r.qrep.toFixed(0)} mL/h)</span></div>` : ''}
+    ${r.qrepPre > 0 ? `<div class="result-row"><span class="result-label">├ 前稀释置换液</span><span>${r.qrepPre.toFixed(0)} mL/h (${(r.inp.preDilution*100).toFixed(0)}%)</span></div>` : ''}
+    ${r.qrepPost > 0 ? `<div class="result-row"><span class="result-label">└ 后稀释置换液</span><span>${r.qrepPost.toFixed(0)} mL/h (${((1-r.inp.preDilution)*100).toFixed(0)}%)</span></div>` : ''}
+    ${r.qdial > 0 ? `<div class="result-row"><span class="result-label">透析液速率</span><span><span class="result-value">${(r.qdial/1000).toFixed(2)}</span> L/h (${r.qdial.toFixed(0)} mL/h)</span></div>` : ''}
+    <div class="result-row"><span class="result-label">净超滤</span><span>${r.inp.netUF} mL/h</span></div>
+    <div class="result-row" style="border-top:2px solid var(--primary);margin-top:8px;padding-top:12px;">
+      <span class="result-label">处方剂量</span><span><span class="result-value">${r.inp.dose}</span> mL/kg/h</span>
+    </div>
+    <div class="result-row">
+      <span class="result-label">有效剂量（前稀释校正）</span><span><span class="result-value" style="color:${r.correctedDose < 20 ? 'var(--accent-red)' : 'var(--primary)'}">${r.correctedDose.toFixed(1)}</span> mL/kg/h</span>
+    </div>
+    ${r.inp.preDilution > 0 ? `<div class="result-row"><span class="result-label">稀释因子</span><span>${r.dilFactor.toFixed(3)}</span></div>` : ''}
+  `;
+  document.getElementById('calcResults').innerHTML = html;
+
+  // FF gauge
+  const ffCard = document.getElementById('ffCard');
+  const ffFill = document.getElementById('ffFill');
+  ffCard.style.display = 'block';
+  const ffPct = Math.min(r.ff, 35);
+  ffFill.style.width = (ffPct / 35 * 100) + '%';
+  if (r.ff < 20) ffFill.style.background = 'var(--accent-green)';
+  else if (r.ff <= 25) ffFill.style.background = 'var(--accent-amber)';
+  else ffFill.style.background = 'var(--accent-red)';
+
+  document.getElementById('ffAlert').innerHTML = `
+    <div class="alert ${r.ffClass}">
+      <strong>FF = ${r.ff.toFixed(1)}%</strong> — ${r.ffMsg}
+    </div>
+  `;
+}
+
+function onCalcChange() {
+  const r = calculatePrescription();
+  renderResults(r);
+  // Save state
+  const inp = r.inp;
+  saveState({ prescription: {
+    weight: inp.weight, hct: inp.hct, mode: inp.mode, dose: inp.dose,
+    hdfRatio: inp.hdfRatio, preDilution: inp.preDilution, netUF: inp.netUF, qbOverride: inp.qbOverride
+  }});
+}
+
+// Mode change: show/hide HDF ratio
+function updateModeUI() {
+  const mode = calcEls.calcMode.value;
+  const g = document.getElementById('hdfRatioGroup');
+  g.style.display = mode === 'CVVHDF' ? 'block' : 'none';
+  calcEls.calcQb.value = '';
+  onCalcChange();
+}
+
+calcEls.calcMode.addEventListener('change', updateModeUI);
+document.getElementById('calcUseRecommended').addEventListener('click', () => {
+  calcEls.calcQb.value = '';
+  onCalcChange();
+});
+calcInputs.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', onCalcChange);
+});
+
+document.getElementById('calcReset').addEventListener('click', () => {
+  calcEls.calcWeight.value = 70;
+  calcEls.calcHct.value = 30;
+  calcEls.calcMode.value = 'CVVHDF';
+  calcEls.calcDose.value = 25;
+  calcEls.calcHdfRatio.value = 50;
+  calcEls.calcPreDilution.value = 50;
+  calcEls.calcNetUF.value = 100;
+  calcEls.calcQb.value = '';
+  updateModeUI();
+  onCalcChange();
+});
+
+// ===== Tool 2: Anticoagulation =====
+// Sub-tab switching
+document.querySelectorAll('.sub-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const sub = tab.dataset.sub;
+    document.getElementById('acCitratePanel').style.display = sub === 'citrate' ? '' : 'none';
+    document.getElementById('acHeparinPanel').style.display = sub === 'heparin' ? '' : 'none';
+    saveState({ acMode: sub });
+    if (sub === 'citrate') calcCitrate(); else calcHeparin();
+  });
+});
+
+// Citrate Calculator
+const citEls = ['citQb','citType','citTargetPostCa','citCurPostCa','citCurSysCa','citCaForm'];
+citEls.forEach(id => { document.getElementById(id)?.addEventListener('input', calcCitrate); });
+
+function getCitrateConc(type) {
+  return type === 'tsc' ? 136 : 113; // mmol/L
+}
+
+function calcCitrate() {
+  const qb = parseFloat(document.getElementById('citQb').value) || 200;
+  const type = document.getElementById('citType').value;
+  const targetPost = parseFloat(document.getElementById('citTargetPostCa').value) || 0.35;
+  const curPost = parseFloat(document.getElementById('citCurPostCa').value) || 0.30;
+  const curSys = parseFloat(document.getElementById('citCurSysCa').value) || 1.15;
+  const caForm = document.getElementById('citCaForm').value;
+
+  const qbLH = qb * 60 / 1000; // L/h
+  const targetCitConcBlood = 4.0; // mmol/L of blood
+  const citrateFlow = qbLH * targetCitConcBlood; // mmol/h
+  const citrateConc = getCitrateConc(type);
+  const citrateRate = citrateFlow / citrateConc * 1000; // mL/h
+
+  // Calcium supplementation estimate
+  const qeffApprox = 25 * 70; // approximate mL/h for estimation
+  const caDivisor = caForm === 'gluconate' ? 125 : 200;
+  const caRate = qeffApprox / caDivisor; // mL/h
+
+  // Paired adjustment logic
+  let citAction = 'maintain', caAction = 'maintain', severity = 'normal';
+  let citDelta = '', caDelta = '';
+  let msg = '';
+
+  const postLow = curPost < 0.25, postOk = curPost >= 0.25 && curPost <= 0.5, postHigh = curPost > 0.5;
+  const sysLow = curSys < 1.0, sysOk = curSys >= 1.0 && curSys <= 1.3, sysHigh = curSys > 1.3;
+
+  if (postHigh && sysLow) {
+    citAction = 'increase'; caAction = 'increase'; citDelta = '↑'; caDelta = '↑'; severity = 'alert';
+    msg = '滤器后 iCa 偏高 (抗凝不足) + 全身 iCa 偏低。增加枸橼酸流速 5-10 mL/h，同时增加钙补充。';
+  } else if (postOk && sysLow) {
+    citAction = 'maintain'; caAction = 'increase'; caDelta = '↑10%'; severity = 'warning';
+    msg = '滤器后 iCa 达标，但全身 iCa 偏低。增加钙补充速率约 10%。';
+  } else if (postLow && sysLow) {
+    citAction = 'decrease'; caAction = 'increase'; citDelta = '↓'; caDelta = '↑'; severity = 'alert';
+    msg = '滤器后 iCa 偏低 (抗凝过度) + 全身 iCa 偏低。减少枸橼酸流速，增加钙补充。';
+  } else if (postHigh && sysOk) {
+    citAction = 'increase'; caAction = 'maintain'; citDelta = '↑'; severity = 'warning';
+    msg = '滤器后 iCa 偏高，抗凝不足。增加枸橼酸流速 5-10 mL/h，钙补充暂不变。';
+  } else if (postOk && sysOk) {
+    citAction = 'maintain'; caAction = 'maintain'; severity = 'normal';
+    msg = '滤器后 iCa 和全身 iCa 均在目标范围。维持当前方案。';
+  } else if (postLow && sysOk) {
+    citAction = 'decrease'; caAction = 'maintain'; citDelta = '↓'; severity = 'warning';
+    msg = '滤器后 iCa 偏低，抗凝偏强。减少枸橼酸流速 5-10 mL/h，钙补充暂不变。';
+  } else if (postHigh && sysHigh) {
+    citAction = 'maintain'; caAction = 'decrease'; caDelta = '↓10%'; severity = 'warning';
+    msg = '全身 iCa 偏高。减少钙补充约 10%，枸橼酸暂不变。';
+  } else if (postOk && sysHigh) {
+    citAction = 'maintain'; caAction = 'decrease'; caDelta = '↓10%'; severity = 'warning';
+    msg = '滤器后 iCa 达标，但全身 iCa 偏高。减少钙补充约 10%。';
+  } else if (postLow && sysHigh) {
+    citAction = 'decrease'; caAction = 'decrease'; citDelta = '↓'; caDelta = '↓'; severity = 'alert';
+    msg = '滤器后 iCa 偏低 + 全身 iCa 偏高。同时减少枸橼酸和钙补充。注意排查枸橼酸蓄积。';
+  }
+
+  const sevClass = severity === 'alert' ? 'alert-danger' : severity === 'warning' ? 'alert-warn' : 'alert-safe';
+
+  document.getElementById('citResults').innerHTML = `
+    <div class="result-row"><span class="result-label">枸橼酸流速</span><span><span class="result-value">${citrateRate.toFixed(1)}</span> mL/h</span></div>
+    <div class="result-row"><span class="result-label">目标血枸橼酸浓度</span><span>${targetCitConcBlood.toFixed(1)} mmol/L 血液</span></div>
+    <div class="result-row"><span class="result-label">钙补充速率（估算）</span><span><span class="result-value">${caRate.toFixed(1)}</span> mL/h (${caForm === 'gluconate' ? '10%葡萄糖酸钙' : '5%氯化钙'})</span></div>
+    <div class="alert ${sevClass}" style="margin-top:16px;">
+      ${msg}
+    </div>
+  `;
+}
+
+// Heparin Calculator
+const hepEls = ['hepWeight','hepAPTT','hepBolusDose','hepMaintDose'];
+hepEls.forEach(id => { document.getElementById(id)?.addEventListener('input', calcHeparin); });
+
+function calcHeparin() {
+  const wt = parseFloat(document.getElementById('hepWeight').value) || 70;
+  const aptt = parseFloat(document.getElementById('hepAPTT').value) || 45;
+  const bolus = parseFloat(document.getElementById('hepBolusDose').value) || 800;
+  const maintUnits = parseFloat(document.getElementById('hepMaintDose').value) || 500;
+  const maintMl = maintUnits / 200; // assuming 200 U/mL concentration
+
+  // UpToDate: target aPTT 45s (or aPTTr 1.5)
+  let action, nextCheck, sevClass;
+  if (aptt < 35) {
+    action = `追加负荷 ${bolus} U 静推，维持速率 +100 U/h → ${maintUnits + 100} U/h`;
+    nextCheck = '4 小时'; sevClass = 'alert-warn';
+  } else if (aptt < 45) {
+    action = `不加负荷，维持速率 +50 U/h → ${maintUnits + 50} U/h`;
+    nextCheck = '4 小时'; sevClass = 'alert-warn';
+  } else if (aptt <= 55) {
+    action = 'aPTT 在目标范围(45-55s)，维持当前输注速度不变。';
+    nextCheck = '6 小时'; sevClass = 'alert-safe';
+  } else if (aptt <= 70) {
+    action = `维持速率 -50 U/h → ${Math.max(maintUnits - 50, 100)} U/h`;
+    nextCheck = '4 小时'; sevClass = 'alert-warn';
+  } else {
+    action = `暂停肝素30-60分钟，重启速率 -100 U/h → ${Math.max(maintUnits - 100, 100)} U/h`;
+    nextCheck = '重启后 2 小时'; sevClass = 'alert-danger';
+  }
+
+  document.getElementById('hepResults').innerHTML = `
+    <div class="result-row"><span class="result-label">首剂负荷量</span><span><span class="result-value">${bolus}</span> U</span></div>
+    <div class="result-row"><span class="result-label">维持输注速度</span><span><span class="result-value">${maintUnits}</span> U/h = <span class="result-value">${maintMl.toFixed(1)}</span> mL/h (200U/mL)</span></div>
+    <div class="result-row"><span class="result-label">当前 aPTT / 患者体重</span><span>${aptt} 秒 / ${wt} kg</span></div>
+    <div class="alert ${sevClass}" style="margin-top:16px;">
+      <strong>调整建议：</strong>${action}<br>
+      <small>下次复查：${nextCheck}。目标 aPTT 45秒 (aPTTr 1.5)。UpToDate 2026。</small>
+    </div>
+  `;
+}
+
+document.getElementById('acReset').addEventListener('click', () => {
+  document.getElementById('citQb').value = 200;
+  document.getElementById('citType').value = 'tsc';
+  document.getElementById('citTargetPostCa').value = 0.35;
+  document.getElementById('citCurPostCa').value = 0.30;
+  document.getElementById('citCurSysCa').value = 1.15;
+  document.getElementById('citCaForm').value = 'gluconate';
+  document.getElementById('hepWeight').value = 70;
+  document.getElementById('hepAPTT').value = 45;
+  document.getElementById('hepBolusDose').value = 800;
+  document.getElementById('hepMaintDose').value = 500;
+  calcCitrate(); calcHeparin();
+});
+
+// ===== Tool 3: Knowledge Base =====
+const kbData = [
+  // ===== CRRT 基本原理 (4) =====
+  { id:'diff-conv', cat:'principles', title:'弥散与对流',
+    content:`<p><strong>弥散 (Diffusion)</strong>：溶质顺浓度梯度跨半透膜运动，小分子（尿素、肌酐、电解质）清除效率高。主要用于<strong>CVVHD</strong>。</p>
+    <p><strong>对流 (Convection)</strong>（溶剂拖曳）：溶质随水分子在静水压梯度下跨膜运动，中分子（500-50,000 Da，包括细胞因子）对流清除更优。主要用于<strong>CVVH</strong>。</p>
+    <table><tr><th>特性</th><th>弥散 (CVVHD)</th><th>对流 (CVVH)</th></tr>
+    <tr><td>驱动力</td><td>浓度梯度</td><td>静水压梯度</td></tr>
+    <tr><td>小分子(<500 Da)</td><td>优</td><td>良</td></tr>
+    <tr><td>中分子(500-50k Da)</td><td>差</td><td>良-优</td></tr>
+    <tr><td>滤器寿命</td><td>较长</td><td>较短</td></tr>
+    <tr><td>抗凝需求</td><td>较低</td><td>较高(FF依赖)</td></tr></table>
+    <p><strong>CVVHDF</strong>结合两种机制。UpToDate推荐CVVHD或CVVHDF而非纯CVVH，因为弥散模式在维持较低FF的同时可提供更高KRT剂量。</p>`,
+    pearl:'UpToDate推荐CVVHD或CVVHDF而非纯CVVH——纯对流模式FF更高、滤器凝血风险更大。弥散模式下溶质清除独立于超滤率，可在低超滤率下维持足够溶质清除。', refs:['KDIGO 2012','Ronco C et al. Lancet 2000'] },
+  { id:'membranes', cat:'principles', title:'CRRT 滤器膜材料',
+    content:`<p>现代CRRT使用<strong>高通量合成膜</strong>：</p>
+    <ul><li><strong>聚砜 (Polysulfone/PES/PAES)</strong>：最常用，生物相容性好，不带电荷</li>
+    <li><strong>聚丙烯腈 (PAN/AN69)</strong>：负电荷膜，对中分子吸附能力强。但可致缓激肽释放——<strong>未处理的AN69膜禁用于使用ACEi的患者</strong>（可致过敏性休克）。AN69表面处理膜(AN69 ST, PEI涂层)可安全用于ACEi患者，但美国不可用</li>
+    <li><strong>PMMA</strong>：兼具吸附和滤过功能</li></ul>
+    <p>膜面积1.0-2.2 m²，截留分子量30-60 kDa。目前无证据表明某种膜材料改善临床结局。AN69膜清除中分子理论上有优势，但未转化为结局差异。</p>`,
+    pearl:'AN69膜（未处理）禁用于ACEi患者——可致过敏性休克。换用AN69 ST处理膜或聚砜膜可安全使用。', refs:['Macedo E, Mehta RL. Am J Kidney Dis 2016'] },
+  { id:'ckrt-vs-ihd', cat:'principles', title:'CKRT vs 间歇性血液透析 (IHD)',
+    content:`<p><strong>CKRT首选场景：</strong></p><ul>
+    <li>血流动力学不稳定（需血管活性药）</li><li>颅内压升高/脑水肿/暴发性肝衰竭（CKRT更好保护脑灌注）</li><li>需持续大量输液（TPN、多种静脉药）</li><li>烧伤（持续皮肤液体丢失）</li></ul>
+    <p><strong>IHD首选场景：</strong></p><ul>
+    <li>血流动力学稳定</li><li>严重高钾血症（伴ECG改变，对钙剂无效）——IHD每分钟钾清除效率远高于CKRT</li><li>需活动/康复</li></ul>
+    <p><strong>关键证据：</strong>多项RCT和meta分析显示，CKRT vs IHD在生存率、肾功能恢复上无差异（HemoDiaFe研究、CONVINT研究）。KDIGO建议两者互补使用。</p>
+    <p>CKRT理论上血流动力学更稳定（缓慢持续清除），但RCT未证实低血压更少。CKRT 48小时内净溶质清除量高于IHD。</p>`,
+    pearl:'血流动力学不稳定 = CKRT；严重高钾 = IHD；两者生存率无差异——根据临床场景和设备条件选择。', refs:['Vinsonneau C et al. Lancet 2006','Schefold JC et al. Crit Care 2014','KDIGO 2012'] },
+  { id:'indications-timing', cat:'principles', title:'CRRT启动时机与适应证',
+    content:`<p><strong>紧急适应证（必须立即启动）：</strong></p><ul>
+    <li>利尿剂难治的液体过负荷</li><li>严重高钾血症 (K+>6.5 mmol/L)</li><li>尿毒症表现（心包炎、脑病）</li><li>严重代酸 (pH<7.1) 尽管药物治疗</li><li>可透析药物/毒素中毒</li></ul>
+    <p><strong>择期启动（灰区）：</strong> K+>6.0 药物无效，或>5.5 且持续组织分解/钾吸收；pH<7.15 无逆原因；少尿+持续正平衡</p>
+    <p><strong>不使用BUN作为决策依据</strong>——BUN受胃肠道出血、激素使用等多种因素影响。也不使用固定时间阈值（如"AKI 72小时"）。</p>
+    <p><strong>关键结论：</strong>STARRT-AKI和AKIKI证实——无紧急适应证时"观望等待"安全，不推荐"预防性"早期启动。早期启动不改善生存，但增加透析依赖和导管不良事件。</p>`,
+    pearl:'无紧急适应证时可以安全等待。BUN不作为启动决策依据，不使用固定时间阈值。早期"预防性"启动有害——增加透析依赖和不良事件。', refs:['STARRT-AKI. NEJM 2020','AKIKI. NEJM 2016','KDIGO 2012'] },
+
+  // ===== 血管通路 (1) =====
+  { id:'vascular-access', cat:'vascular', title:'血管通路要点',
+    content:`<p><strong>导管：</strong>双腔透析导管，11-14 Fr，长度15-24 cm（股静脉≥24 cm）。部分中心使用三腔导管，但第三腔减小透析腔内径，可能限制血流。</p>
+    <p><strong>穿刺部位优先级：</strong></p><ol>
+    <li><strong>右颈内静脉 (RIJ)</strong>：首选，路径直，狭窄率低</li>
+    <li><strong>股静脉</strong>：≥24 cm导管达下腔静脉。感染风险略高</li>
+    <li><strong>左颈内静脉</strong>：路径曲折</li>
+    <li><strong>锁骨下静脉</strong>：狭窄率20-50%，尽可能避免</li></ol>
+    <p><strong>导管尖端：</strong>右心房-SVC交界处（股静脉→下腔静脉）。</p>
+    <p><strong>三腔导管注意事项：</strong>第三腔在CKRT期间不应用于救命药物（抗生素等）。枸橼酸抗凝时第三腔不输注钙剂（与循环、钙值不准确、RCA效果差相关）。</p>
+    <p><strong>ESKD患者：</strong>避免使用AVF/AVG（针刺脱落出血风险），除非无其他通路。</p>`,
+    pearl:'右IJ首选，股静脉≥24cm导管。锁骨下尽量避免（狭窄率最高）。三腔导管第三腔不输抗菌药、RCA时也不输钙。' },
+  { id:'blood-flow', cat:'vascular', title:'血流速 (Qb) 选择',
+    content:`<p><strong>不同场景推荐Qb：</strong></p><ul>
+    <li>全身抗凝：200 mL/min</li><li>RCA：<200 mL/min（常100-150，更高血流需更多枸橼酸→增加枸橼酸负荷和费用）</li><li>无抗凝：250-300 mL/min</li></ul>
+    <p><strong>Qb与模式的关系：</strong></p><ul>
+    <li>CVVHD: Qb ≥ 2.5× 透析液流速（保证透析液近完全饱和）</li>
+    <li>CVVH后稀释: Qb ≥ 5× 置换液流速（优化FF）</li>
+    <li>CVVH前稀释: Qb ≥ 6× 置换液流速（优化清除+减少前稀释效应）</li></ul>
+    <p><strong>底线：</strong>CKRT中溶质清除主要取决于废液速率而非血流速。Qb 100-300 mL/min通常不影响清除。但Qb<100-150→FF↑+血流淤滞→凝血风险↑。Qb>250-300→导管功能不良→报警→停泵→凝血。</p>
+    <p>血流速不改变血流动力学稳定性——回路内血容量不随Qb改变而变化。</p>`,
+    pearl:'RCA时Qb<200（减少枸橼酸负荷），无抗凝时Qb 250-300（减少凝血）。Qb不影响血流动力学。', refs:['UpToDate: Prescription of CKRT in AKI in Adults 2026'] },
+
+  // ===== 抗凝 (6) =====
+  { id:'anticoag-strategy', cat:'anticoag', title:'抗凝总策略',
+    content:`<p><strong>UpToDate推荐路径：</strong></p><ol>
+    <li>先尝试<strong>无抗凝</strong>CRRT——如果血管通路良好，通常可维持滤器寿命>24h</li>
+    <li>如果反复凝血（滤器寿命<24h）且非通路问题→启动抗凝</li>
+    <li><strong>首选RCA</strong>（除非禁忌）</li>
+    <li><strong>次选肝素</strong>（RCA不可用或有禁忌时）</li>
+    <li>部分中心从一开始就常规使用抗凝（KDIGO也建议使用抗凝）</li></ol>
+    <p><strong>无抗凝延长滤器寿命策略：</strong></p><ul>
+    <li>维持足够Qb (100-300 mL/min)，避免极低血流</li>
+    <li>FF<20-25%（前稀释替代后稀释，用CVVHD/CVVHDF而非纯CVVH）</li>
+    <li>及时响应报警（警报→血流停滞→凝血）</li>
+    <li>静脉壶加盐水层减少血-气接触</li>
+    <li>避免置换液过热</li>
+    <li>搬动时避免管路扭折</li></ul>`,
+    pearl:'先无抗凝→能维持24h就继续；反复凝血→RCA首选→肝素备选。FF<20%、前稀释、避免管路扭折是无抗凝的三大要诀。', refs:['Davenport A. UpToDate 2026','KDIGO 2012'] },
+  { id:'rca-principles', cat:'anticoag', title:'枸橼酸抗凝 (RCA) 原理与方案',
+    content:`<p><strong>原理：</strong>枸橼酸螯合血中离子钙→体外iCa<0.4 mmol/L→抑制凝血级联。枸橼酸-钙复合物经滤器清除，静脉端补钙维持正常全身iCa。</p>
+    <p><strong>标准起始方案 (CVVHD, 4%枸橼酸钠)：</strong></p>
+    <table><tr><th>体重 (kg)</th><th>Qb (mL/min)</th><th>透析液 (mL/h)</th><th>4%枸橼酸 (mL/h)</th><th>钙剂* (mL/h)</th></tr>
+    <tr><td>&lt;60</td><td>80</td><td>1500</td><td>140</td><td>38</td></tr>
+    <tr><td>60-90</td><td>100</td><td>2000</td><td>170</td><td>50</td></tr>
+    <tr><td>&gt;90</td><td>120</td><td>2500</td><td>205</td><td>65</td></tr></table>
+    <p><small>*钙剂浓度91 mmol/L。枸橼酸浓度136 mmol/L。</small></p>
+    <p><strong>滤器后iCa目标：</strong>0.3-0.4 mmol/L（对应血枸橼酸浓度4-6 mmol/L）。<strong>全身iCa目标：</strong>正常范围。</p>
+    <p><strong>透析液/置换液调整：</strong>RCA时使用低碳酸氢盐液(22-25 mEq/L)防碱中毒（枸橼酸代谢产生碳酸氢盐）。用低钠液(130 mEq/L)防高钠（枸橼酸液含钠）。优先使用无钙液。使用0.75 mmol/L镁液（枸橼酸也结合镁）。</p>`,
+    pearl:'RCA起始方案按体重三档：<60/60-90/>90kg。滤器后iCa目标0.3-0.4。用低HCO3-液(22-25)防碱中毒。', refs:['Morgera S et al. Crit Care Med 2009','UpToDate 2026'] },
+  { id:'rca-monitoring', cat:'anticoag', title:'RCA 监测与枸橼酸蓄积',
+    content:`<p><strong>监测频率：</strong></p><ul>
+    <li>电解质+血气：q6h（稳定48-72h后可延至q12h）</li><li>滤器后iCa：q6h滴定枸橼酸（若枸橼酸剂量固定于Qb，可减少监测频率）</li><li>全身iCa：q6h滴定钙补充</li><li>总钙/离子钙比值：每日一次</li></ul>
+    <p><strong>枸橼酸蓄积四联征：</strong></p><ol>
+    <li>进行性代酸+阴离子间隙升高</li><li>离子钙下降→钙补充速率需持续增加</li><li>总钙升高</li><li>总钙/离子钙比值 > 2.5</li></ol>
+    <p><strong>蓄积处理：</strong>全部四项满足→停RCA。部分满足→先尝试减枸橼酸流速（CVVH时）或增透析液流速（CVVHD/CVVHDF时）。钙输注>90 mL/h也应考虑停止。</p>
+    <p><strong>RCA禁忌：</strong>超急性肝衰竭（转氨酶>1000 IU/L）、心源性休克（乳酸>8 mmol/L）。注意：慢加急性肝衰竭/肝硬化可能仍可耐受RCA。</p>`,
+    pearl:'总钙/iCa>2.5 = 枸橼酸蓄积红旗。四项全满足→停RCA。禁忌：超急性肝衰+心源性休克乳酸>8。', refs:['Slowinski T et al. Crit Care 2015','UpToDate 2026'] },
+  { id:'rca-vs-heparin', cat:'anticoag', title:'RCA vs 肝素：证据对比',
+    content:`<p><strong>Meta分析（11 RCT, 992例）：</strong>vs全身肝素——</p><ul>
+    <li>回路丢失风险↓ (HR 0.76)</li><li>出血风险↓ (RR 0.36)</li><li>滤器寿命↑</li><li>生存率：无差异</li></ul>
+    <p><strong>最大RCT (Zarbock 2020, JAMA, 596例)：</strong>RCA vs 全身肝素——滤器寿命延长，但新发感染率更高。生存率无差异。</p>
+    <p><strong>COVID-19特殊时期：</strong>很多中心联合使用全身肝素+RCA，未观察到出血增加（因RCA不抑制血小板活化和凝血酶生成）。</p>
+    <p><strong>滤器寿命延长≠生存获益。</strong>Cochrane系统综述结论：CKRT最有效抗凝方案尚待确定。</p>`,
+    pearl:'RCA比肝素：滤器寿命更长+出血更少，但生存率无差异。滤器寿命延长≠生存获益。', refs:['Zarbock A et al. JAMA 2020','Bai M et al. Intensive Care Med 2015'] },
+  { id:'heparin-ac', cat:'anticoag', title:'肝素抗凝',
+    content:`<p><strong>方案 (UpToDate)：</strong>首剂负荷500-1000 U，然后500 U/h维持。根据aPTT调整。</p>
+    <p><strong>目标：</strong>aPTT 45秒或aPTTr 1.5倍正常值。DIC或血小板减少患者应减量。</p>
+    <p><strong>缺点：</strong>药代动力学不可预测（个体差异大）、HIT风险、抗凝血酶缺乏致肝素抵抗、出血风险10-50%（与aPTT延长程度相关）。</p>
+    <p><strong>肝素涂层膜：</strong>与标准无抗凝方案相比未显示获益。</p>
+    <p><strong>其他选项：</strong>低分子肝素、阿加曲班/比伐卢定（HIT患者）、依前列醇、萘莫司他。数据不足以支持常规使用。</p>`,
+    pearl:'肝素：首剂500-1000U + 500U/h维持，目标aPTT 45秒。出血风险10-50%与aPTT延长相关。肝素涂层膜无额外获益。', refs:['Davenport A. UpToDate 2026'] },
+
+  // ===== CRRT 模式 (1) =====
+  { id:'modes', cat:'modes', title:'CRRT 四种模式对比',
+    content:`<table><tr><th>模式</th><th>机制</th><th>超滤率</th><th>置换液</th><th>透析液</th><th>适用场景</th></tr>
+    <tr><td>SCUF</td><td>单纯超滤</td><td>2-8 mL/min</td><td>无</td><td>无</td><td>仅液体过负荷</td></tr>
+    <tr><td>CVVH</td><td>对流</td><td>20-25 mL/kg/h</td><td>✓(大量)</td><td>无</td><td>AKI+中大分子清除</td></tr>
+    <tr><td>CVVHD</td><td>弥散</td><td>2-8 mL/min</td><td>无</td><td>1-2 L/h</td><td>AKI+小分子清除为主</td></tr>
+    <tr><td>CVVHDF</td><td>对流+弥散</td><td>可变</td><td>✓</td><td>✓</td><td>综合清除（最常用）</td></tr></table>
+    <p><strong>SCUF</strong>仅用于容量控制，不做溶质清除。每日安全移除可达8L液体。</p>
+    <p><strong>CVVH</strong>超滤率高→需要大量置换液补充→FF高→凝血风险大。前稀释可部分缓解。</p>
+    <p><strong>CVVHD</strong>弥散为主，超滤仅限于净液体移除→无需静脉补液。弥散模式溶质清除独立于超滤率。</p>`,
+    pearl:'SCUF仅液体移除≈100-500mL/h。CVVH超滤率高→需大量置换液→FF高。CVVHD溶质清除独立于超滤率，滤器寿命长。' },
+
+  // ===== 处方与剂量 (5) =====
+  { id:'dosing', cat:'dosing', title:'CRRT 剂量',
+    content:`<p><strong>标准剂量：</strong>废液速率 20-25 mL/kg/h（KDIGO推荐处方25-30以保证交付20-25）。</p>
+    <p><strong>处方剂量 vs 交付剂量：</strong>滤器凝血、前稀释、停机时间→实际交付≈处方的70-80%。DO-RE-MI研究：中位处方34.3 vs 交付27 mL/kg/h。</p>
+    <p><strong>关键RCT：</strong></p><ul>
+    <li><strong>RENAL (2009, NEJM)</strong>: 25 vs 40 mL/kg/h, n=1508 → 90天死亡率均44.7% (p=0.99)</li>
+    <li><strong>ATN (2008, NEJM)</strong>: 20 vs 35 mL/kg/h, n=1124 → 60天死亡率51.5% vs 53.6% (无差异)</li>
+    <li><strong>Cochrane (2016)</strong>: 高剂量不改善生存</li></ul>
+    <p><strong>高剂量风险：</strong>低磷血症↑、机械通气延长、电解质紊乱↑（低钾、低磷）。患者水平meta分析：更强化KRT与肾功能恢复延迟相关。</p>
+    <p><strong>最低可接受剂量：</strong>观察性数据显示死亡率在交付剂量<13-15 mL/kg/h时才增加。</p>`,
+    pearl:'标准20-25 mL/kg/h。处方建议25-30以保证交付。RENAL和ATN确立"天花板效应"——高剂量无额外获益。', refs:['RENAL Study. NEJM 2009','ATN Study. NEJM 2008','KDIGO 2012'] },
+  { id:'prescription-detail', cat:'dosing', title:'处方参数详解',
+    content:`<p><strong>模式选择：</strong>UpToDate推荐CVVHD或CVVHDF而非纯CVVH（纯对流FF更高→凝血风险更大）。无证据表明某种模式临床结局更优。</p>
+    <p><strong>剂量 (废液速率)：</strong>≥20 mL/kg/h。严重高钾/代酸/高氨血症可能需要更高剂量。</p>
+    <p><strong>血流速 Qb：</strong>全身抗凝200，RCA 100-150，无抗凝250-300 mL/min。</p>
+    <p><strong>滤过分数 FF：</strong>维持<20%。FF↑→滤器凝血↑。降低FF三招：增加Qb、使用前稀释、用CVVHD/CVVHDF而非纯CVVH。</p>
+    <p><strong>液体清除：</strong>目标每小时零平衡到负100-200 mL/h（24h零到负2-4L）。最低死亡率对应净超滤1.0-1.75 mL/kg/h（U形曲线）。</p>
+    <p><strong>监测：</strong>电解质+血气 q6-12h（稳定后可q12-24h），RCA时更频繁。</p>`,
+    pearl:'模式选CVVHD/CVVHDF（非纯CVVH）。Qb 200(RCA 100-150)。FF<20%。液体清除1.0-1.75 mL/kg/h死亡率最低。' },
+  { id:'ckrt-solutions', cat:'dosing', title:'置换液/透析液成分',
+    content:`<table><tr><th>成分</th><th>标准浓度</th><th>注意事项</th></tr>
+    <tr><td>Na+</td><td>130-140 mEq/L</td><td>RCA时用低钠(130)防高钠（枸橼酸含钠）</td></tr>
+    <tr><td>K+</td><td>0-4 mEq/L</td><td>常规用4；严重高钾用0或2；CVVHDF两种液等速混合可得2mEq/L</td></tr>
+    <tr><td>HCO3-</td><td>22-35 mEq/L</td><td>RCA用低HCO3-(22-25)防碱中毒；非RCA用高HCO3-(32-35)</td></tr>
+    <tr><td>磷</td><td>0 或 1 mmol/L</td><td>血磷<4.5 mg/dL用含磷液；>50%患者发生低磷血症</td></tr>
+    <tr><td>Ca2+</td><td>0 或 2.5-3.5 mEq/L</td><td>RCA优先无钙；含磷液钙浓度≤2.5</td></tr>
+    <tr><td>葡萄糖</td><td>0 或 100-110 mg/dL</td><td>无糖液改善血糖控制；少数可致低血糖/酮症酸中毒</td></tr></table>
+    <p><strong>建议使用商业化预配液</strong>，避免现场配制（减少配制差错）。严重高钾时IHD优于CKRT——IHD每分钟钾清除效率远高于CKRT。</p>`,
+    pearl:'RCA三调整：低Na(130)、低HCO3-(22-25)、无钙液。常规患者用4K液，高钾用0-2K。含磷液减少低磷血症。' },
+  { id:'ff-explained', cat:'dosing', title:'滤过分数 (FF) 详解',
+    content:`<p><strong>定义：</strong>进入透析器的血浆水中经超滤跨膜移除的比例。</p>
+    <p><strong>公式：</strong></p>
+    <p><code>FF = 超滤流速 / 血浆水流速</code></p>
+    <p><code>超滤流速 = 前置换 + 后置换 + 净超滤</code></p>
+    <p><code>血浆水流速 = Qb×60×(1-Hct/100) + 前置换 + 其他前泵输注(如枸橼酸)</code></p>
+    <p><strong>目标 <20%。</strong>FF 20-25%→警告；>25%→凝血高危。</p>
+    <p><strong>为什么重要：</strong>高FF→血液在滤器中过度浓缩(血液浓缩)→血细胞+蛋白+凝血因子浓度↑→凝血。</p>
+    <p><strong>为什么CVVHD的FF天然低于CVVH：</strong>在同样废液速率下，CVVH所有清除靠对流（=高超滤），而CVVHD溶质清除靠弥散（超滤仅用于净液体移除，速率低得多）。</p>
+    <p><strong>降低FF三招：</strong>(1)增加Qb（增加血浆水流速）(2)使用前稀释（前置换液增加血浆水流速）(3)切换为CVVHD或CVVHDF（减少对流比例）</p>`,
+    pearl:'FF>20%=凝血风险↑。同样参数下CVVH的FF总是高于CVVHD。降FF：增Qb、前稀释、换CVVHD/CVVHDF。' },
+  { id:'fluid-balance', cat:'dosing', title:'液体平衡管理',
+    content:`<p><strong>目标：</strong>每小时零平衡到负100-200 mL/h（24h零到负2-4L）。由肾脏科+ICU团队共同确定目标小时液体平衡，床旁护士调整净超滤。</p>
+    <p><strong>容量评估：</strong>查体+超声(IVC变异度/肺B线)+BIA。</p>
+    <p><strong>U形曲线：</strong>净超滤1.0-1.75 mL/kg/h死亡率最低。过高或过低均增加风险。但注意：该数据仅反映机器设定值，不能完全排除病情严重度的混杂（需要更多输液=更高设定超滤=更高病情严重度）。</p>
+    <p><strong>耐受性监测：</strong>超滤中若出现心输出量下降、血管活性药需求增加→减慢或暂停液体清除。</p>
+    <p><strong>特殊情况：</strong>严重ARDS液体过负荷——可能需要优先液体清除，即便轻度增加升压药需求。</p>`,
+    pearl:'最佳净超滤：1.0-1.75 mL/kg/h（U形曲线死亡率最低）。由肾内科+ICU协作确定目标。不耐受→暂停超滤。' },
+
+  // ===== 并发症与故障 (4) =====
+  { id:'complications', cat:'complications', title:'常见并发症与处理',
+    content:`<table><tr><th>并发症</th><th>原因/机制</th><th>处理</th></tr>
+    <tr><td>低血压</td><td>超滤过快、有效容量不足</td><td>暂停超滤、补液、减净超滤率、血管活性药</td></tr>
+    <tr><td>低磷血症(>50%)</td><td>磷经滤器持续丢失，与废液速率正相关</td><td>用含磷置换液(1 mmol/L)，必要时静脉补磷</td></tr>
+    <tr><td>低钾血症</td><td>低钾溶液持续清除</td><td>用4 mEq/L钾液，监测q6h</td></tr>
+    <tr><td>低体温</td><td>体外循环热量丢失</td><td>加温液至38-39°C、加热毯</td></tr>
+    <tr><td>低镁血症</td><td>类似低磷，RCA时枸橼酸也结合镁</td><td>RCA时用0.75 mmol/L镁液</td></tr>
+    <tr><td>滤器凝血</td><td>抗凝不足/Qb低/FF高</td><td>调整抗凝、提高Qb、降低FF、更换滤器</td></tr>
+    <tr><td>抗生素亚治疗浓度</td><td>CKRT清除+分布容积大</td><td>TDM、按CKRT清除率调整剂量</td></tr>
+    <tr><td>枸橼酸蓄积</td><td>肝衰/休克→代谢障碍</td><td>减/停枸橼酸、增透析液流速</td></tr>
+    <tr><td>导管感染</td><td>导管相关血流感染</td><td>严格无菌操作、拔除感染导管、抗感染</td></tr></table>
+    <p>低磷血症与呼吸衰竭延长相关（RCT：>50%患者发生）。</p>`,
+    pearl:'低磷血症最常见(>50%患者)，与呼吸衰竭延长相关。用含磷置换液可避免。抗生素亚治疗浓度常被忽视——TDM是关键。' },
+  { id:'alarm-trouble', cat:'complications', title:'常见报警与处理',
+    content:`<table><tr><th>报警</th><th>常见原因</th><th>处理</th></tr>
+    <tr><td>动脉压低(大负压)</td><td>导管贴壁/部分堵塞、Qb过高</td><td>调整体位/导管、冲洗管腔、调换动静脉端、降低Qb</td></tr>
+    <tr><td>静脉压高</td><td>回输端堵塞、管路扭结</td><td>检查管路通畅、确认导管位置</td></tr>
+    <tr><td>TMP↑(跨膜压升高)</td><td>滤器进行性凝血</td><td>评估抗凝达标→冲洗滤器→安排更换</td></tr>
+    <tr><td>空气报警</td><td>管路中有气泡</td><td>排查管路完整性、静脉壶液面、连接处松动→排气</td></tr>
+    <tr><td>漏血报警</td><td>滤器破膜</td><td>立即停止→检查废液颜色→更换滤器</td></tr>
+    <tr><td>平衡报警</td><td>入液/出液偏差>5%</td><td>检查秤上无接触→重新校准→确认液袋无挤压</td></tr></table>
+    <p><strong>回路凝血防治：</strong>管路凝血的最常见原因是报警后反应迟缓（报警→停泵→血流停滞→凝血）。CKRT体外管路和滤器只能处理有限血量——Qb>300 mL/min时更快达到寿命上限。</p>`,
+    pearl:'报警响应迟缓是管路凝血的最常见原因。TMP逐渐升高=滤器凝血的最早信号。Qb>300反而缩短管路寿命。' },
+  { id:'drug-dosing-ckrt', cat:'complications', title:'CKRT中药物剂量',
+    content:`<p><strong>核心公式：</strong></p>
+    <p><code>CKRT药物清除率(mL/min) = 废液流速(L/h) × 未结合分数 × 1000/60</code></p>
+    <p>总清除率 = CKRT清除 + 残余肾功能清除（尿量≥20mL/h时需评估）</p>
+    <p><strong>负荷剂量：</strong>亲水性药(Vd<0.7 L/kg)受液体过负荷影响最大→用实际体重(非理想体重)计算负荷量→"填充"增大的分布容积。</p>
+    <p><strong>关键原则：</strong></p><ul>
+    <li>≤2000 Da：所有CKRT模式同等有效清除</li><li>2000-15000 Da：膜孔开始限制（极少数药物，如胰岛素5808 Da）</li><li>>15000 Da：任何CKRT模式均无法有效清除（生物制剂）</li></ul>
+    <p><strong>临床警示：</strong>AKI患者的肝代谢率高于ESKD——不能直接套用ESKD剂量指南→会导致剂量不足。25% β-内酰胺类在CKRT中达亚治疗浓度。</p>
+    <p><strong>最佳方法：</strong>TDM(治疗药物监测)。无TDM时用Lexidrug CKRT剂量指南。血管活性药/镇静/镇痛药——滴定至临床效果，不需要按CKRT调整。</p>`,
+    pearl:'AKI肝代谢>ESKD→不能套用ESKD剂量！25% β-内酰胺达亚治疗浓度→TDM是关键。血管活性药/镇静药滴定临床效果即可。', refs:['Mueller BA, Golper TA. UpToDate 2026','Lewis SJ, Mueller BA. Semin Dial 2014'] },
+
+  // ===== 关键临床试验 (7) =====
+  { id:'startt-aki', cat:'trials', title:'STARRT-AKI (2020) — 启动时机',
+    content:`<p><strong>NEJM 2020;383:240-251.</strong> 15国168中心，3019例重症AKI（无紧急适应证）。</p>
+    <p><strong>干预：</strong>早期启动(12h内) vs 标准策略(出现适应证后启动)。</p>
+    <p><strong>结果：</strong>90天死亡率43.9% vs 43.7% (p=0.92)。早期组更多依赖透析(10.4% vs 6.0%)、更多再住院(21% vs 17%)、更多不良事件(23% vs 17%)。早期组97%接受RRT vs 延迟组62%。</p>
+    <p><strong>结论：</strong>无紧急适应证时，"观望等待"安全。早期启动增加医疗资源利用且无生存获益。</p>`,
+    pearl:'无紧急适应证→等待安全。早期启动=更多透析依赖+不良事件+无生存获益。n=3019, NEJM 2020。' },
+  { id:'akiki', cat:'trials', title:'AKIKI (2016) — 启动时机',
+    content:`<p><strong>NEJM 2016;375:122-133.</strong> 法国31个ICU，620例KDIGO AKI 3期（需机械通气/血管活性药）。</p>
+    <p><strong>干预：</strong>早期 vs 延迟RRT（出现紧急适应证后启动）。</p>
+    <p><strong>结果：</strong>60天死亡率48.5% vs 49.7% (p=0.79)。延迟组49%最终无需RRT（自愈）。早期组导管相关感染率更高(10% vs 5%)。</p>
+    <p><strong>结论：</strong>支持观望策略。约一半AKI 3期患者可自愈，无需RRT。</p>`,
+    pearl:'AKI 3期≠必须RRT。延迟组49%自愈。早期组感染率翻倍(10% vs 5%)。' },
+  { id:'akiki-2', cat:'trials', title:'AKIKI-2 (2021) — 延迟多久？',
+    content:`<p><strong>Lancet 2021;397:1293-1303.</strong> 法国多中心，278例重症AKI（无紧急适应证）。</p>
+    <p><strong>设计：</strong>等待至少尿72h或BUN 112-140 mg/dL→随机分"启动"或"继续延迟至紧急适应证或BUN>140"。</p>
+    <p><strong>结果：</strong>延迟组79%最终接受RRT。28天、60天死亡率差异无统计学意义，但延迟组数值更高（60天55% vs 44%, p未达显著）。</p>
+    <p><strong>与STARRT-AKI对比：</strong>AKIKI-2的BUN值更高（延迟组均值123 vs STARRT-AKI延迟组85 mg/dL），提示存在一个目前未明确的安全延迟上限。</p>`,
+    pearl:'存在一个不确定的"不可再等"阈值。过于延迟可能有害——但精准拐点因患者而异。BUN不作为主要决策工具。' },
+  { id:'renal-trial', cat:'trials', title:'RENAL (2009) — 剂量',
+    content:`<p><strong>NEJM 2009;361:1627-1638.</strong> 澳/新35个ICU，1508例，CVVHDF。</p>
+    <p><strong>比较：</strong>25 vs 40 mL/kg/h。</p>
+    <p><strong>结果：</strong>90天死亡率均为44.7% (OR 1.00, 95%CI 0.81-1.23)。90天仍依赖RRT：6.8% vs 4.4% (无显著差异)。</p>
+    <p><strong>意义：</strong>最早确立CRRT剂量"天花板效应"的大型RCT。自此20-25 mL/kg/h成为标准。</p>`,
+    pearl:'25 vs 40 mL/kg/h→死亡率完全相同(44.7%)。确立标准剂量20-25 mL/kg/h。高剂量=无获益+更多低磷血症。' },
+  { id:'atn-trial', cat:'trials', title:'ATN (2008) — 剂量',
+    content:`<p><strong>NEJM 2008;359:7-20.</strong> 美国VA/NIH，1124例，IHD/CKRT/PIKRT根据血流动力学切换。</p>
+    <p><strong>比较：</strong>强化组(IHD每周6次, CKRT 35 mL/kg/h) vs 标准组(IHD每周3次, CKRT 20 mL/kg/h)。</p>
+    <p><strong>结果：</strong>60天死亡率53.6% vs 51.5% (p=0.47)。强化组低血压更多。肾功能恢复和RRT持续时间无差异。</p>
+    <p><strong>意义：</strong>与RENAL一致——强化KRT无额外获益。KDIGO基于此推荐IHD Kt/V≥1.2/次（每周3次）。</p>`,
+    pearl:'强化KRT(每周6次IHD或CKRT 35 mL/kg/h) vs 标准→死亡率无差异。强化组低血压更多。' },
+  { id:'ivoire', cat:'trials', title:'IVOIRE (2013) — 脓毒症高容量',
+    content:`<p><strong>Intensive Care Med 2013;39:1535-1546.</strong> 法国18个ICU，140例脓毒症休克合并AKI。</p>
+    <p><strong>比较：</strong>HVHF 70 mL/kg/h vs 标准CVVH 35 mL/kg/h。</p>
+    <p><strong>结果：</strong>28天死亡率37.1% vs 35.7% (p=1.0)。血流动力学改善无差异。</p>
+    <p><strong>结论：</strong>高容量血滤对脓毒症休克无额外获益。不推荐常规使用。</p>`,
+    pearl:'脓毒症休克70 mL/kg/h vs 35→死亡率无差异(37% vs 36%)。高容量血滤不推荐常规使用。' },
+  { id:'liberate-d', cat:'trials', title:'LIBERATE-D (2026) — 撤机策略',
+    content:`<p><strong>JAMA 2026;335:326.</strong> 220例KRT依赖AKI但已脱离升压药和机械通气的住院患者。</p>
+    <p><strong>比较：</strong>保守策略（按需透析）vs 常规每周3次透析至满足尿量/肌酐清除率标准。</p>
+    <p><strong>结果：</strong>保守组出院时肾功能恢复率更高(64% vs 50%)且恢复更快(2天 vs 8.5天)。多变量校正后差异无统计学意义。</p>
+    <p><strong>意义：</strong>肾功能即将恢复时（尿量↑、肌酐↓）→个体化减量透析→可能加速肾功能恢复。需更多RCT验证。</p>`,
+    pearl:'肾功能恢复期：保守策略(按需透析)可能加速恢复(64% vs 50%)。不建议僵化地坚持每周3次。' }
+];
+
+const kbCatNames = {
+  'all': '全部条目',
+  'principles': 'CRRT 基本原理',
+  'vascular': '血管通路',
+  'anticoag': '抗凝',
+  'modes': 'CRRT 模式',
+  'dosing': '处方与剂量',
+  'complications': '并发症与故障',
+  'trials': '关键临床试验'
+};
+
+let kbFilter = 'all';
+let kbBookmarked = new Set(loadState().kbBookmarks || []);
+let kbShowBookmarkedOnly = false;
+
+function renderKBCategories() {
+  const counts = {};
+  kbData.forEach(e => { counts[e.cat] = (counts[e.cat] || 0) + 1; });
+  counts['all'] = kbData.length;
+
+  let html = '';
+  for (const [cat, name] of Object.entries(kbCatNames)) {
+    const count = counts[cat] || 0;
+    html += `<button class="kb-category${cat === kbFilter ? ' active' : ''}" data-cat="${cat}">${name} (${count})</button>`;
+  }
+  document.getElementById('kbCategories').innerHTML = html;
+
+  document.querySelectorAll('.kb-category').forEach(btn => {
+    btn.addEventListener('click', () => {
+      kbFilter = btn.dataset.cat;
+      kbShowBookmarkedOnly = false;
+      document.getElementById('kbShowBookmarked').textContent = '仅显示收藏';
+      renderKBCategories();
+      renderKBEntries();
+    });
+  });
+}
+
+function toggleBookmark(id) {
+  if (kbBookmarked.has(id)) kbBookmarked.delete(id);
+  else kbBookmarked.add(id);
+  saveState({ kbBookmarks: [...kbBookmarked] });
+  renderKBEntries();
+}
+
+function renderKBEntries() {
+  let entries = kbData;
+  if (kbFilter !== 'all') entries = entries.filter(e => e.cat === kbFilter);
+  if (kbShowBookmarkedOnly) entries = entries.filter(e => kbBookmarked.has(e.id));
+
+  const query = (document.getElementById('kbSearch').value || '').toLowerCase();
+  if (query) {
+    entries = entries.filter(e => e.title.toLowerCase().includes(query) || (e.content && e.content.toLowerCase().includes(query)));
+  }
+
+  let html = '';
+  entries.forEach(e => {
+    const bm = kbBookmarked.has(e.id);
+    html += `<div class="kb-entry" data-id="${e.id}">
+      <div class="kb-entry-header" onclick="this.parentElement.classList.toggle('open')">
+        <span class="kb-entry-title">${highlight(e.title, query)}</span>
+        <div class="kb-entry-meta">
+          <small style="color:var(--text-secondary)">${kbCatNames[e.cat]}</small>
+          <button class="bookmark-btn${bm ? ' bookmarked' : ''}" onclick="event.stopPropagation();toggleBookmark('${e.id}')">${bm ? '★' : '☆'}</button>
+        </div>
+      </div>
+      <div class="kb-entry-body">
+        ${query ? highlight(e.content, query) : e.content}
+        ${e.pearl ? `<div class="pearl"><strong>临床要点：</strong>${e.pearl}</div>` : ''}
+        ${e.refs ? `<p style="font-size:0.8rem;color:var(--text-secondary);">参考文献：${e.refs.join('; ')}</p>` : ''}
+      </div>
+    </div>`;
+  });
+
+  if (entries.length === 0) {
+    html = '<div style="text-align:center;padding:40px;color:var(--text-secondary);">没有匹配的条目</div>';
+  }
+  document.getElementById('kbEntries').innerHTML = html;
+}
+
+function highlight(text, query) {
+  if (!query) return text;
+  const re = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  return text.replace(re, '<mark style="background:#f9e79f;padding:1px 2px;border-radius:2px;">$1</mark>');
+}
+
+document.getElementById('kbSearch').addEventListener('input', renderKBEntries);
+document.getElementById('kbShowBookmarked').addEventListener('click', function() {
+  kbShowBookmarkedOnly = !kbShowBookmarkedOnly;
+  this.textContent = kbShowBookmarkedOnly ? '显示全部' : '仅显示收藏';
+  kbFilter = 'all';
+  renderKBCategories();
+  if (!kbShowBookmarkedOnly) { document.querySelector('.kb-category[data-cat="all"]')?.classList.add('active'); }
+  renderKBEntries();
+});
+
+// ===== Tool 4: Checklist =====
+const clData = {
+  'pre-initiation': {
+    label: '上机前核查',
+    categories: [
+      { name: '适应证', critical: false, items: [
+        { id:'pre-01', text:'AKI 伴血流动力学不稳定', detail:'IHD 无法耐受的低血压或血管活性药依赖', critical:false },
+        { id:'pre-02', text:'严重液体过负荷', detail:'利尿剂抵抗的肺水肿/全身水肿', critical:true },
+        { id:'pre-03', text:'严重电解质紊乱', detail:'K+>6.5 mmol/L 或 Na+<115/>160 mmol/L', critical:true },
+        { id:'pre-04', text:'严重代谢性酸中毒', detail:'pH<7.2 且补碱无效或液体负荷不允许', critical:true },
+        { id:'pre-05', text:'清除毒素/药物', detail:'如锂、二甲双胍相关性乳酸酸中毒', critical:false },
+        { id:'pre-06', text:'体温调控', detail:'严重低体温(>32°C)或高热', critical:false }
+      ]},
+      { name: '血管通路', critical: true, items: [
+        { id:'pre-07', text:'导管位置已确认', detail:'CXR 或超声确认导管尖端位于右心房-SVC交界处', critical:true },
+        { id:'pre-08', text:'导管型号合适', detail:'11-14 Fr 双腔透析导管，股静脉使用≥24 cm', critical:false },
+        { id:'pre-09', text:'导管功能正常', detail:'血流速>200 mL/min，动脉压>-200 mmHg', critical:true },
+        { id:'pre-10', text:'穿刺部位无感染/血肿', detail:'红、肿、渗出、血肿形成', critical:false }
+      ]},
+      { name: '抗凝方案', critical: true, items: [
+        { id:'pre-11', text:'抗凝方式已确定', detail:'RCA 首选，肝素/无抗凝备选。先尝试无抗凝→维持>24h则继续', critical:true },
+        { id:'pre-12', text:'枸橼酸使用前评估肝功能和乳酸', detail:'超急性肝衰(ALT>1000)或心源性休克(乳酸>8)→禁忌RCA。慢加急性肝衰/肝硬化可能仍可耐受', critical:true },
+        { id:'pre-13', text:'肝素使用前评估出血风险和HIT史', detail:'活动性出血、近期手术/创伤、血小板减少、HIT史', critical:true },
+        { id:'pre-14', text:'钙补充液已准备（RCA时）', detail:'10%葡萄糖酸钙或5%氯化钙。RCA透析液用低HCO3-(22-25)防碱中毒、低Na(130)', critical:true },
+        { id:'pre-14b', text:'枸橼酸蓄积风险评估', detail:'基线总钙/iCa比值、肝功能、乳酸水平记录', critical:false }
+      ]},
+      { name: '处方参数', critical: false, items: [
+        { id:'pre-15', text:'模式已确定', detail:'推荐CVVHD或CVVHDF（非纯CVVH）——弥散模式FF更低', critical:false },
+        { id:'pre-16', text:'剂量已处方', detail:'≥20 mL/kg/h，处方25-30以保证交付20-25', critical:false },
+        { id:'pre-17', text:'血流速已设定', detail:'抗凝200, RCA 100-150, 无抗凝250-300 mL/min', critical:false },
+        { id:'pre-18', text:'净超滤目标已设定', detail:'目标1.0-1.75 mL/kg/h（最低死亡率区间）。每小时零平衡到负100-200 mL/h', critical:false },
+        { id:'pre-19', text:'置换液/透析液已连接', detail:'检查成分(K+/HCO3-/Ca2+/磷)与抗凝方案匹配。RCA用低HCO3-液。优先使用商业化预配液', critical:false },
+        { id:'pre-20', text:'FF<20%已确认', detail:'滤过分数=超滤流速/血浆水流速。>20%→凝血风险↑', critical:false }
+      ]}
+    ]
+  },
+  'daily-round': {
+    label: '每日评估',
+    categories: [
+      { name: '液体平衡', critical: true, items: [
+        { id:'daily-01', text:'每小时超滤量达标', detail:'净超滤率符合处方，偏差<10%', critical:true },
+        { id:'daily-02', text:'24h 液体平衡评估', detail:'记录总入量、总出量、净平衡', critical:true },
+        { id:'daily-03', text:'容量状态再评估', detail:'查体+超声IVC+肺B线，调整净超滤目标', critical:true }
+      ]},
+      { name: '血管通路', critical: true, items: [
+        { id:'daily-04', text:'导管出口部位检查', detail:'有无红、肿、渗液、压痛', critical:true },
+        { id:'daily-05', text:'导管功能评估', detail:'血流速是否达标、动静脉压是否正常', critical:true }
+      ]},
+      { name: '滤器与管路', critical: false, items: [
+        { id:'daily-06', text:'滤器外观检查', detail:'有无血栓、颜色变化、跨膜压趋势', critical:false },
+        { id:'daily-07', text:'预估滤器剩余寿命', detail:'根据TMP趋势和凝血指标判断是否需要安排更换', critical:false }
+      ]},
+      { name: '实验室监测', critical: true, items: [
+        { id:'daily-08', text:'血气分析 q6h', detail:'pH、HCO3-、BE、乳酸', critical:true },
+        { id:'daily-09', text:'电解质 q6h', detail:'K+、Na+、Ca2+、P、Mg2+', critical:true },
+        { id:'daily-10', text:'抗凝监测', detail:'RCA: 滤器后iCa q2h+全身iCa q6h。肝素: aPTT q6h', critical:true },
+        { id:'daily-11', text:'血常规、凝血功能', detail:'至少 q12-24h', critical:false }
+      ]},
+      { name: '抗凝调整', critical: false, items: [
+        { id:'daily-12', text:'枸橼酸蓄积筛查', detail:'总钙/iCa>2.5→红旗。四项全满足(代酸↑+iCa↓+总钙↑+比值>2.5)→停RCA', critical:true },
+        { id:'daily-13', text:'抗凝方案调整后记录', detail:'调整原因、新的参数、计划复查时间', critical:false },
+        { id:'daily-14', text:'滤过分数重新评估', detail:'Qb/Hct/置换液量变化后重新计算FF，确保<20%', critical:false }
+      ]},
+      { name: '药物剂量', critical: true, items: [
+        { id:'daily-15', text:'抗生素剂量评估', detail:'CKRT清除→亚治疗浓度风险。TDM优先；无TDM时按CKRT清除率调整。尤其关注β-内酰胺类、万古霉素', critical:true },
+        { id:'daily-16', text:'负荷剂量是否充足', detail:'亲水性药(Vd<0.7 L/kg)需足够负荷量=理想体重+液体过负荷估重', critical:false }
+      ]}
+    ]
+  },
+  'troubleshooting': {
+    label: '报警排查',
+    categories: [
+      { name: '压力报警', critical: false, items: [
+        { id:'alm-01', text:'动脉端低压报警 → 导管动脉端功能障碍', detail:'调头/侧卧→冲洗导管→调换动静脉端→降低Qb→若反复→考虑更换导管', critical:true },
+        { id:'alm-02', text:'静脉端高压报警 → 回输端堵塞', detail:'检查管路是否扭结→确认导管静脉端通畅→冲洗', critical:true },
+        { id:'alm-03', text:'TMP 逐渐升高 → 滤器凝血', detail:'评估抗凝→冲洗滤器→增加血流速→安排更换滤器', critical:true }
+      ]},
+      { name: '安全报警', critical: true, items: [
+        { id:'alm-04', text:'空气报警 (Air Detector)', detail:'检查管路完整性→检查静脉壶液面→排查连接处松动→排气', critical:true },
+        { id:'alm-05', text:'漏血报警 (Blood Leak)', detail:'立即停止→检查废液颜色→确认滤器破膜→更换滤器', critical:true },
+        { id:'alm-06', text:'平衡报警 (Balance Error)', detail:'入液/出液>5%偏差→检查秤上无接触→重新校准→确认液体袋无挤压', critical:true }
+      ]},
+      { name: '运行问题', critical: false, items: [
+        { id:'alm-07', text:'频繁凝血/滤器寿命短(<24h)', detail:'检查抗凝达标→提高Qb→检查前稀释比例→排除导管功能不良', critical:false },
+        { id:'alm-08', text:'血流量不足/频繁抽吸', detail:'导管贴壁→调整体位→必要时更换导管→确认导管无血栓', critical:false },
+        { id:'alm-09', text:'置换液/透析液温度异常', detail:'检查加热器设置(38-39°C)→确认无管路散热→低体温时调高温度', critical:false }
+      ]}
+    ]
+  }
+};
+
+let clPhase = 'pre-initiation';
+let clChecked = loadState().checklistChecked || {};
+
+function renderChecklist() {
+  // Phase tabs
+  let tabsHtml = '';
+  for (const [key, val] of Object.entries(clData)) {
+    tabsHtml += `<button class="phase-tab${key === clPhase ? ' active' : ''}" data-phase="${key}">${val.label}</button>`;
+  }
+  document.getElementById('clPhaseTabs').innerHTML = tabsHtml;
+
+  document.querySelectorAll('.phase-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      clPhase = tab.dataset.phase;
+      renderChecklist();
+    });
+  });
+
+  const phase = clData[clPhase];
+  const allIds = [];
+  phase.categories.forEach(cat => cat.items.forEach(item => allIds.push(item.id)));
+
+  const checkedCount = allIds.filter(id => clChecked[id]).length;
+  const pct = allIds.length > 0 ? (checkedCount / allIds.length * 100).toFixed(0) : 0;
+
+  document.getElementById('clProgress').innerHTML = `
+    <div class="checklist-progress">
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;"></div></div>
+      <div class="progress-text">${checkedCount}/${allIds.length} 已完成 (${pct}%)</div>
+    </div>
+  `;
+
+  let itemsHtml = '';
+  phase.categories.forEach(cat => {
+    itemsHtml += `<div class="checklist-category-title">${cat.name}${cat.critical ? ' <span class="critical-badge">关键</span>' : ''}</div>`;
+    cat.items.forEach(item => {
+      const checked = clChecked[item.id] ? 'checked' : '';
+      itemsHtml += `
+        <div class="checklist-item${item.critical ? ' critical' : ''}">
+          <input type="checkbox" id="${item.id}" ${checked} onchange="toggleCheck('${item.id}')">
+          <label for="${item.id}">
+            ${item.text}
+            ${item.detail ? `<span class="item-detail">${item.detail}</span>` : ''}
+          </label>
+        </div>`;
+    });
+  });
+  document.getElementById('clItems').innerHTML = itemsHtml;
+}
+
+function toggleCheck(id) {
+  clChecked[id] = !clChecked[id];
+  saveState({ checklistChecked: clChecked });
+  renderChecklist();
+}
+
+document.getElementById('clReset').addEventListener('click', () => {
+  const phase = clData[clPhase];
+  phase.categories.forEach(cat => cat.items.forEach(item => { clChecked[item.id] = false; }));
+  saveState({ checklistChecked: clChecked });
+  renderChecklist();
+});
+
+// ===== Tool 5: CRRT Workflow =====
+const wfState = {
+  step: 1,
+  choices: {},
+  weight: 65,
+  hct: 30,
+  k: 5.8,
+  ph: 7.22,
+  hco3: 18,
+  map: 60,
+  urineOutput: 'oliguric', // 'oliguric' | 'non-oliguric'
+  fluidOverload: true,
+  vasopressor: true,
+  liverOk: true,
+  lactate: 2.3
+};
+
+const wfSteps = [
+  { id:1, title:'评估 — 是否需要启动CRRT？', emoji:'' },
+  { id:2, title:'选择CRRT模式', emoji:'' },
+  { id:3, title:'计算治疗剂量', emoji:'' },
+  { id:4, title:'设定血流速 (Qb)', emoji:'' },
+  { id:5, title:'配置液体分配', emoji:'' },
+  { id:6, title:'选择抗凝方案', emoji:'' },
+  { id:7, title:'选择置换液/透析液成分', emoji:'' },
+  { id:8, title:'设定液体清除目标', emoji:'' },
+  { id:9, title:'滤过分数安全校验', emoji:'' },
+  { id:10, title:'监测计划与预期时间线', emoji:'' },
+  { id:11, title:'撤机评估', emoji:'' }
+];
+
+function renderWorkflowStep() {
+  const s = wfState;
+  const stepNum = s.step;
+  let html = '';
+
+  // Step 1: Assessment
+  if (stepNum === 1) {
+    html = `
+    <div class="card">
+      <h3>第一步：这个患者需要CRRT吗？</h3>
+      <p style="color:var(--text-secondary);margin-bottom:16px;">典型场景：68岁女性，脓毒症休克，少尿12h，液体过负荷+15L，K⁺ 5.8，pH 7.22，MAP 60（去甲肾维持），利尿剂抵抗。</p>
+      <p>请逐条判断以下适应证：</p>
+    </div>
+    <div class="wf-choice-grid">
+      <div class="wf-choice${s.choices.urgent ? ' selected' : ''}" onclick="wfToggleChoice('urgent')">
+        <div class="wf-choice-title">紧急适应证</div>
+        <div class="wf-choice-desc">K⁺>6.5 / pH<7.1 / 利尿剂抵抗的肺水肿 / 尿毒症脑病心包炎 / 可透析中毒</div>
+      </div>
+      <div class="wf-choice${s.choices.elective ? ' selected' : ''}" onclick="wfToggleChoice('elective')">
+        <div class="wf-choice-title">择期适应证</div>
+        <div class="wf-choice-desc">K⁺>5.5+持续组织分解 / pH<7.15无逆原因 / 少尿+持续正平衡+氧需求↑</div>
+      </div>
+      <div class="wf-choice${s.choices.await ? ' selected' : ''}" onclick="wfToggleChoice('await')">
+        <div class="wf-choice-title">等待观察</div>
+        <div class="wf-choice-desc">无紧急/择期适应证，AKI可能自行恢复。STARRT-AKI：观望安全。</div>
+      </div>
+      <div class="wf-choice${s.choices.notIndicated ? ' selected' : ''}" onclick="wfToggleChoice('notIndicated')">
+        <div class="wf-choice-title">无适应证</div>
+        <div class="wf-choice-desc">暂无明确RRT适应证，继续药物治疗+密切监测。</div>
+      </div>
+    </div>`;
+
+    if (s.choices.elective || s.choices.urgent) {
+      html += `<div class="wf-highlight-box"><h4>判断结果</h4><p>此患者满足${s.choices.urgent ? '紧急' : '择期'}适应证：K⁺ 5.8 + 脓毒症持续分解 → 择期启动。pH 7.22 虽未达紧急标准但趋势恶化。少尿+液体过负荷+氧需求增加。结合STARRT-AKI和AKIKI证据——<strong>有适应证时启动，不"预防性"启动。</strong></p></div>`;
+
+      html += `<div class="card"><h4>模拟患者参数（你可以修改后贯穿全流程）</h4>
+      <div class="form-row">
+        <div class="form-group"><label>体重 kg</label><input type="number" id="wfWeight" value="${s.weight}" min="30" max="200" step="0.1" onchange="wfUpdateState()"></div>
+        <div class="form-group"><label>Hct %</label><input type="number" id="wfHct" value="${s.hct}" min="15" max="60" step="1" onchange="wfUpdateState()"></div>
+        <div class="form-group"><label>K⁺ mmol/L</label><input type="number" id="wfK" value="${s.k}" min="2" max="9" step="0.1" onchange="wfUpdateState()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>pH</label><input type="number" id="wfPh" value="${s.ph}" min="6.8" max="7.5" step="0.01" onchange="wfUpdateState()"></div>
+        <div class="form-group"><label>HCO₃⁻</label><input type="number" id="wfHco3" value="${s.hco3}" min="5" max="40" step="1" onchange="wfUpdateState()"></div>
+        <div class="form-group"><label>MAP mmHg</label><input type="number" id="wfMap" value="${s.map}" min="30" max="120" step="1" onchange="wfUpdateState()"></div>
+      </div></div>`;
+    }
+  }
+
+  // Step 2: Modality
+  else if (stepNum === 2) {
+    html = `<div class="card"><h3>第二步：选择CRRT模式</h3><p style="color:var(--text-secondary);">没有证据表明某种模式临床结局更优。根据机构设备和经验选择。UpToDate推荐CVVHD或CVVHDF而非纯CVVH（纯对流FF更高→凝血风险更大）。</p></div>
+    <div class="wf-choice-grid">
+      <div class="wf-choice${s.choices.mode==='CVVHDF'?' selected':''}" onclick="wfSelectMode('CVVHDF')">
+        <div class="wf-choice-title">CVVHDF（推荐）</div><div class="wf-choice-desc">对流+弥散。最常用，全分子量谱清除。新手友好。</div>
+      </div>
+      <div class="wf-choice${s.choices.mode==='CVVHD'?' selected':''}" onclick="wfSelectMode('CVVHD')">
+        <div class="wf-choice-title">CVVHD</div><div class="wf-choice-desc">纯弥散。小分子清除优，滤器寿命最长，FF低。无置换液需求。</div>
+      </div>
+      <div class="wf-choice${s.choices.mode==='CVVH'?' selected':''}" onclick="wfSelectMode('CVVH')">
+        <div class="wf-choice-title">CVVH</div><div class="wf-choice-desc">纯对流。中分子清除优（细胞因子）。FF高→凝血风险大。需大量置换液。</div>
+      </div>
+      <div class="wf-choice${s.choices.mode==='SCUF'?' selected':''}" onclick="wfSelectMode('SCUF')">
+        <div class="wf-choice-title">SCUF</div><div class="wf-choice-desc">单纯超滤。仅用于液体移除，不做溶质清除。每日可达8L。</div>
+      </div>
+    </div>`;
+  }
+
+  // Step 3: Dose
+  else if (stepNum === 3) {
+    const dosePrescribed = s.choices.dose || 25;
+    const qeff = dosePrescribed * s.weight;
+    html = `<div class="card"><h3>第三步：计算治疗剂量（废液速率）</h3>
+    <p style="color:var(--text-secondary);">KDIGO推荐交付剂量20-25 mL/kg/h。处方25-30以保证交付20-25（考虑凝血/停机损失~20%）。高剂量(>30)无已证实的额外获益（RENAL, ATN）。</p>
+    <div class="form-group"><label>处方剂量 mL/kg/h</label>
+    <input type="range" id="wfDose" value="${dosePrescribed}" min="20" max="35" step="1" oninput="wfUpdateDose()">
+    <div class="range-labels"><span>20</span><span>25</span><span>30</span><span>35</span></div></div>
+    <div class="wf-result-box"><table>
+    <tr><td>患者体重</td><td>${s.weight} kg</td></tr>
+    <tr><td>处方剂量</td><td><strong>${dosePrescribed} mL/kg/h</strong></td></tr>
+    <tr><td>废液速率</td><td><strong>${dosePrescribed * s.weight} mL/h (${(dosePrescribed * s.weight / 60).toFixed(1)} mL/min)</strong></td></tr>
+    <tr><td>预计交付剂量(~80%)</td><td>~${(dosePrescribed * 0.8).toFixed(0)} mL/kg/h</td></tr></table></div>
+    </div>`;
+  }
+
+  // Step 4: Blood Flow
+  else if (stepNum === 4) {
+    const acMode = s.choices.anticoag || 'none';
+    let recQb;
+    if (acMode === 'citrate') recQb = '100-150';
+    else if (acMode === 'heparin') recQb = '200';
+    else recQb = '250-300';
+    const qb = s.choices.qb || 150;
+    html = `<div class="card"><h3>第四步：设定血流速 (Qb)</h3>
+    <p style="color:var(--text-secondary);">CKRT中溶质清除主要取决于废液速率而非血流速。但Qb过低→FF↑+血流淤滞→凝血。Qb过高→导管报警→停泵→凝血。</p>
+    <table style="width:100%;font-size:0.9rem;"><tr><th>抗凝方式</th><th>推荐Qb</th></tr>
+    <tr><td>无抗凝</td><td>250-300 mL/min</td></tr>
+    <tr><td>RCA</td><td>100-150 mL/min</td></tr>
+    <tr><td>全身肝素</td><td>200 mL/min</td></tr></table>
+    <p style="margin-top:12px;">当前抗凝选择：<strong>${acMode==='citrate'?'RCA枸橼酸':acMode==='heparin'?'肝素':'无抗凝'}</strong> → 推荐Qb <strong>${recQb}</strong> mL/min</p>
+    <div class="form-group"><label>设定 Qb mL/min (当前MAP≈${s.map}, ${s.map<65?'血压偏低→从低开始':'血压稳定'}）</label>
+    <input type="number" id="wfQb" value="${qb}" min="50" max="350" step="10" onchange="wfUpdateState()"></div>
+    </div>`;
+  }
+
+  // Step 5: Fluid Splits
+  else if (stepNum === 5) {
+    const mode = s.choices.mode || 'CVVHDF';
+    const dose = (s.choices.dose || 25);
+    const qeff = dose * s.weight;
+    const hdfRatio = s.choices.hdfRatio || 50;
+    const preRatio = s.choices.preRatio || 50;
+
+    let qrep = 0, qdial = 0;
+    if (mode === 'CVVH') { qrep = qeff; qdial = 0; }
+    else if (mode === 'CVVHD') { qrep = 0; qdial = qeff; }
+    else if (mode === 'CVVHDF') { qrep = qeff * hdfRatio/100; qdial = qeff * (1-hdfRatio/100); }
+
+    const qrepPre = qrep * preRatio/100;
+    const qrepPost = qrep * (1-preRatio/100);
+
+    html = `<div class="card"><h3>第五步：配置液体分配</h3><p style="color:var(--text-secondary);">模式=${mode}，总废液=${qeff} mL/h</p>
+    <div class="wf-result-box"><table>
+    <tr><td>总废液速率</td><td><strong>${qeff} mL/h</strong></td></tr>
+    <tr><td>置换液总速率</td><td>${qrep} mL/h</td></tr>
+    <tr><td>├ 前稀释 (${preRatio}%)</td><td>${qrepPre.toFixed(0)} mL/h</td></tr>
+    <tr><td>└ 后稀释 (${100-preRatio}%)</td><td>${qrepPost.toFixed(0)} mL/h</td></tr>
+    <tr><td>透析液速率</td><td>${qdial} mL/h</td></tr></table></div>`;
+
+    if (mode === 'CVVHDF') {
+      html += `<div class="form-group"><label>置换液/透析液分流比 (置换液%)</label>
+      <input type="range" id="wfHdfRatio" value="${hdfRatio}" min="10" max="90" step="5" oninput="wfUpdateState()">
+      <div class="range-labels"><span>10%置换</span><span>50%</span><span>90%置换</span></div></div>`;
+    }
+    html += `<div class="form-group"><label>前稀释比例 %<br><small style="color:var(--text-secondary);">前稀释=降低FF延长滤器寿命，但降低有效剂量。MAP低时优先前稀释。</small></label>
+    <input type="range" id="wfPreRatio" value="${preRatio}" min="0" max="100" step="10" oninput="wfUpdateState()">
+    <div class="range-labels"><span>0%(纯后稀释)</span><span>50%</span><span>100%(纯前稀释)</span></div></div>`;
+  }
+
+  // Step 6: Anticoagulation
+  else if (stepNum === 6) {
+    html = `<div class="card"><h3>第六步：选择抗凝方案</h3><p style="color:var(--text-secondary);">策略：先尝试无抗凝→能维持滤器>24h则继续→反复凝血(<24h)则启动RCA（首选）或肝素。</p></div>
+    <div class="wf-choice-grid">
+      <div class="wf-choice${s.choices.anticoag==='none'?' selected':''}" onclick="wfSelectAnticoag('none')">
+        <div class="wf-choice-title">无抗凝（首选尝试）</div><div class="wf-choice-desc">前提：血管通路良好。FF<20%、前稀释、Qb≥250、及时响应报警。</div>
+      </div>
+      <div class="wf-choice${s.choices.anticoag==='citrate'?' selected':''}" onclick="wfSelectAnticoag('citrate')">
+        <div class="wf-choice-title">RCA 枸橼酸（首选抗凝）</div><div class="wf-choice-desc">出血风险最低、滤器寿命最长。禁忌：超急性肝衰(ALT>1000)+心源性休克(乳酸>8)。</div>
+      </div>
+      <div class="wf-choice${s.choices.anticoag==='heparin'?' selected':''}" onclick="wfSelectAnticoag('heparin')">
+        <div class="wf-choice-title">普通肝素</div><div class="wf-choice-desc">首剂500-1000U+500U/h维持，目标aPTT 45s。出血风险10-50%。</div>
+      </div>
+    </div>`;
+
+    if (s.choices.anticoag === 'citrate') {
+      html += `<div class="wf-result-box"><h4>RCA起始方案 (4%枸橼酸钠, CVVHD)</h4>
+      <table><tr><th>体重</th><th>Qb</th><th>透析液</th><th>枸橼酸</th><th>钙剂*</th></tr>
+      <tr><td>&lt;60kg</td><td>80</td><td>1500</td><td>140</td><td>38 mL/h</td></tr>
+      <tr${s.weight>=60&&s.weight<=90?' style="font-weight:700;background:#eafaf1;"':''}><td>60-90kg</td><td>100</td><td>2000</td><td>170</td><td>50 mL/h</td></tr>
+      <tr${s.weight>90?' style="font-weight:700;background:#eafaf1;"':''}><td>>90kg</td><td>120</td><td>2500</td><td>205</td><td>65 mL/h</td></tr></table>
+      <p style="font-size:0.8rem;margin-top:8px;">*10%葡萄糖酸钙。滤器后iCa目标0.3-0.4。全身iCa正常。监测q6h。来源: Morgera 2009。</p>
+      <p style="font-size:0.85rem;margin-top:8px;"><strong>禁忌评估：</strong>ALT ${s.liverOk?'<1000 ✓':'需评估'} | 乳酸 ${s.lactate} ${s.lactate<8?'✓':'需评估'} | MAP ${s.map}</p></div>`;
+    }
+    if (s.choices.anticoag === 'heparin') {
+      html += `<div class="wf-result-box"><h4>肝素方案 (UpToDate)</h4><table>
+      <tr><td>首剂负荷</td><td>500-1000 U (推荐800U)</td></tr>
+      <tr><td>维持输注</td><td>500 U/h</td></tr>
+      <tr><td>目标aPTT</td><td>45秒 (aPTTr 1.5)</td></tr>
+      <tr><td>监测频率</td><td>q6h → 稳定后适当延长</td></tr></table></div>`;
+    }
+    if (s.choices.anticoag === 'none') {
+      html += `<div class="wf-highlight-box"><h4>无抗凝关键策略</h4><ul>
+      <li>维持Qb 250-300 mL/min</li><li>FF<20%（前稀释+CVVHD/CVVHDF）</li>
+      <li>及时响应报警（警报→停泵→血流停滞→凝血）</li>
+      <li>静脉壶加盐水层减少血-气接触</li><li>避免置换液过热</li></ul></div>`;
+    }
+  }
+
+  // Step 7: Solutions
+  else if (stepNum === 7) {
+    const ac = s.choices.anticoag || 'none';
+    const isRCA = ac === 'citrate';
+    html = `<div class="card"><h3>第七步：选择置换液/透析液成分</h3><p style="color:var(--text-secondary);">根据抗凝方式和患者情况匹配。建议使用商业化预配液。</p></div>
+    <div class="wf-result-box"><table>
+    <tr${isRCA?' style="background:#fef9e7;"':''}><td>Na⁺</td><td><strong>${isRCA?'130':'140'} mEq/L</strong></td><td>${isRCA?'枸橼酸含钠→用低钠液防高钠':'常规生理浓度'}</td></tr>
+    <tr><td>K⁺</td><td><strong>${s.k>6?'0-2':'4'} mEq/L</strong></td><td>${s.k>6?'严重高钾→低钾液。但IHD优于CKRT':'常规K浓度'}</td></tr>
+    <tr${isRCA?' style="background:#fef9e7;"':''}><td>HCO₃⁻</td><td><strong>${isRCA?'22-25':s.ph<7.25?'32-35':'25-30'} mEq/L</strong></td><td>${isRCA?'枸橼酸代谢→HCO₃⁻→防碱中毒':'纠正酸中毒'}</td></tr>
+    <tr><td>Ca²⁺</td><td><strong>${isRCA?'0 (无钙)':'2.5'} mEq/L</strong></td><td>${isRCA?'无钙液→枸橼酸有效螯合':'常规含钙'}</td></tr>
+    <tr><td>磷</td><td><strong>1 mmol/L (含磷)</strong></td><td>预防低磷血症（>50%患者发生）</td></tr>
+    <tr><td>Mg²⁺</td><td><strong>${isRCA?'0.75':'0.5'} mmol/L</strong></td><td>${isRCA?'枸橼酸也结合镁→需更高镁浓度':'常规'}</td></tr>
+    <tr><td>葡萄糖</td><td><strong>0-110 mg/dL</strong></td><td>无糖液改善血糖控制</td></tr></table></div>`;
+  }
+
+  // Step 8: Net UF
+  else if (stepNum === 8) {
+    const netUF = s.choices.netUF || 80;
+    html = `<div class="card"><h3>第八步：设定液体清除目标</h3>
+    <p style="color:var(--text-secondary);">最低死亡率对应净超滤1.0-1.75 mL/kg/h（U形曲线）。目标每小时零平衡到负100-200 mL/h。</p>
+    <div class="form-group"><label>净超滤目标 mL/h</label>
+    <div class="wf-input-group"><input type="number" id="wfNetUF" value="${netUF}" min="0" max="500" step="10" onchange="wfUpdateState()"><span class="unit">mL/h</span></div></div>
+    <div class="wf-result-box"><table>
+    <tr><td>净超滤设定</td><td><strong>${netUF} mL/h</strong></td></tr>
+    <tr><td>24h液体清除</td><td><strong>${(netUF*24/1000).toFixed(1)} L/天</strong></td></tr>
+    <tr><td>净超滤率(per kg)</td><td><strong>${(netUF/s.weight).toFixed(2)} mL/kg/h</strong> ${netUF/s.weight>=1&&netUF/s.weight<=1.75?'✓ 在最佳区间(1.0-1.75)':netUF/s.weight<1?'→偏低，如果血流动力学允许可上调':'→偏高，注意监测血压'}</td></tr>
+    </table></div>
+    <div class="wf-highlight-box"><h4>U形曲线提醒</h4><p>过低(<2L/天)=液体正平衡持续→死亡率↑。过高(>2mL/kg/h)=低血压风险→死亡率↑。<strong>最佳区间1.0-1.75 mL/kg/h。</strong></p></div>
+    </div>`;
+  }
+
+  // Step 9: FF Check
+  else if (stepNum === 9) {
+    const mode = s.choices.mode || 'CVVHDF';
+    const dose = s.choices.dose || 25;
+    const qeff = dose * s.weight;
+    const hdfRatio = s.choices.hdfRatio || 50;
+    const preRatio = s.choices.preRatio || 50;
+    const qb = s.choices.qb || 150;
+    const netUF = s.choices.netUF || 80;
+    const ac = s.choices.anticoag || 'none';
+
+    let qrep = 0;
+    if (mode === 'CVVH') qrep = qeff;
+    else if (mode === 'CVVHDF') qrep = qeff * hdfRatio/100;
+    const qrepPre = qrep * preRatio/100;
+    const qrepPost = qrep * (1-preRatio/100);
+    const quf = qrepPre + qrepPost + netUF;
+    const qp = qb * 60 * (1 - s.hct/100);
+    const ff = qp + qrepPre > 0 ? (quf / (qp + qrepPre)) * 100 : 0;
+    const dilFactor = qp + qrepPre > 0 ? qp / (qp + qrepPre) : 1;
+    const correctedDose = dose * dilFactor;
+
+    let ffColor, ffMsg;
+    if (ff < 20) { ffColor = 'var(--accent-green)'; ffMsg = '安全 — 滤器凝血风险低'; }
+    else if (ff <= 25) { ffColor = 'var(--accent-amber)'; ffMsg = '警告 — 滤器凝血风险升高，考虑增加Qb或降低置换液量'; }
+    else { ffColor = 'var(--accent-red)'; ffMsg = '危险 — 滤器凝血风险显著增加！必须立即调整参数！'; }
+
+    html = `<div class="card"><h3>第九步：滤过分数安全校验</h3><p style="color:var(--text-secondary);">这是处方中最关键的安全检查。FF>20%→滤器内血液过度浓缩→凝血级联。</p></div>
+    <div class="wf-result-box">
+    <h4>FF计算过程</h4>
+    <table>
+    <tr><td>超滤流速 (Quf)</td><td>= 前${qrepPre.toFixed(0)} + 后${qrepPost.toFixed(0)} + 净超滤${netUF} = <strong>${quf.toFixed(0)} mL/h</strong></td></tr>
+    <tr><td>血浆水流速 (Qp)</td><td>= Qb${qb} × 60 × (1-Hct${s.hct/100})${qrepPre>0?' + 前稀释'+qrepPre.toFixed(0):''} = <strong>${(qp+qrepPre).toFixed(0)} mL/h</strong></td></tr>
+    <tr><td style="font-size:1.1rem;">滤过分数 (FF)</td><td style="font-size:1.4rem;font-weight:700;color:${ffColor};">= ${ff.toFixed(1)}%</td></tr>
+    <tr><td>稀释因子</td><td>= ${dilFactor.toFixed(3)}</td></tr>
+    <tr><td>有效剂量(校正后)</td><td>= <strong>${correctedDose.toFixed(1)} mL/kg/h</strong> (处方${dose})</td></tr></table>
+    </div>
+    <div class="alert ${ff<20?'alert-safe':ff<=25?'alert-warn':'alert-danger'}"><strong>FF = ${ff.toFixed(1)}%</strong> — ${ffMsg}</div>`;
+
+    if (ff > 20) {
+      html += `<div class="wf-highlight-box"><h4>降低FF建议</h4><ul>
+      <li>增加Qb（当前${qb}→${Math.min(qb+50, 350)} mL/min）→ FF降至${(quf/((qb+50)*60*(1-s.hct/100)+qrepPre)*100).toFixed(1)}%</li>
+      <li>增加前稀释比例（当前${preRatio}%→${Math.min(preRatio+20, 100)}%）</li>
+      <li>切换为CVVHD或CVVHDF（减少对流比例）</li></ul></div>`;
+    }
+
+    // Compile full prescription
+    const acLabel = {citrate:'RCA枸橼酸',heparin:'普通肝素',none:'无抗凝'};
+    html += `<div class="card" style="margin-top:16px;"><h3>处方汇总单</h3>
+    <table style="width:100%;"><tr><th>参数</th><th>设定</th><th>备注</th></tr>
+    <tr><td>模式</td><td>${mode}</td><td>—</td></tr>
+    <tr><td>剂量</td><td>${dose} mL/kg/h (废液${qeff} mL/h)</td><td>交付~${correctedDose.toFixed(0)}</td></tr>
+    <tr><td>Qb</td><td>${qb} mL/min</td><td>${ac==='citrate'?'RCA→低血流':'常规'}</td></tr>
+    <tr><td>置换液</td><td>${qrep} mL/h (前${preRatio}%后${100-preRatio}%)</td><td>${preRatio>50?'前稀释为主→FF↓':'后稀释为主→清除↑'}</td></tr>
+    <tr><td>透析液</td><td>${qeff-qrep} mL/h</td><td>—</td></tr>
+    <tr><td>净超滤</td><td>${netUF} mL/h (${(netUF*24/1000).toFixed(1)} L/天)</td><td>${netUF/s.weight>=1?'在最佳区间':'偏低'}</td></tr>
+    <tr><td>抗凝</td><td>${acLabel[s.choices.anticoag||'none']}</td><td>—</td></tr>
+    <tr><td style="font-weight:700;">FF</td><td style="font-weight:700;color:${ffColor};">${ff.toFixed(1)}%</td><td>${ff<20?'✓安全':'⚠需调整'}</td></tr>
+    <tr><td>有效剂量</td><td>${correctedDose.toFixed(1)} mL/kg/h</td><td>前稀释校正后</td></tr></table></div>`;
+  }
+
+  // Step 10: Monitoring
+  else if (stepNum === 10) {
+    html = `<div class="card"><h3>第十步：监测计划与预期时间线</h3></div>
+    <div class="wf-timeline">
+    <div class="wf-timeline-item"><div class="wf-timeline-time">0-6h</div><div class="wf-timeline-body"><strong>预期：</strong>血压开始稳定，K⁺缓慢下降。<strong>你要做：</strong>关注MAP→能否上调Qb。查第一次血气+电解质。</div></div>
+    <div class="wf-timeline-item"><div class="wf-timeline-time">6-12h</div><div class="wf-timeline-body"><strong>预期：</strong>MAP改善→Qb可上调，pH回升。<strong>你要做：</strong>查血气→评估K⁺是否达标。记录每小时液体平衡→是否按计划负平衡。</div></div>
+    <div class="wf-timeline-item"><div class="wf-timeline-time">12-24h</div><div class="wf-timeline-body"><strong>预期：</strong>净液体平衡转负，BUN/Cr开始下降。<strong>你要做：</strong>评估超滤耐受性→有无低血压。看尿量有无恢复迹象。评估滤器状态(TMP趋势)。</div></div>
+    <div class="wf-timeline-item"><div class="wf-timeline-time">24-48h</div><div class="wf-timeline-body"><strong>预期：</strong>血流动力学明显改善，水肿减轻。<strong>你要做：</strong>是否可下调血管活性药？滤器寿命→需要换吗？若RCA，查总钙/iCa比值。</div></div>
+    <div class="wf-timeline-item"><div class="wf-timeline-time">48-72h</div><div class="wf-timeline-body"><strong>预期：</strong>考虑停CRRT或转IHD。<strong>你要做：</strong>尿量>30mL/h→留24h尿测肌酐清除率。评估撤机条件（见下一步）。</div></div></div>
+    <div class="wf-result-box"><h4>监测频率</h4><table>
+    <tr><td>血气+电解质</td><td>q6h（稳定48-72h→q12-24h）</td></tr>
+    <tr><td>液体平衡(入/出)</td><td>每小时记录+每6h汇总评估</td></tr>
+    <tr><td>滤器评估(TMP趋势)</td><td>每班护士记录</td></tr>
+    <tr><td>RCA: 滤器后iCa</td><td>q2-6h滴定枸橼酸</td></tr>
+    <tr><td>RCA: 全身iCa+总钙</td><td>q6h全身iCa + qd总钙/iCa比值</td></tr>
+    <tr><td>肝素: aPTT</td><td>q6h至稳定</td></tr>
+    <tr><td>血常规+凝血</td><td>至少q12-24h</td></tr></table></div>`;
+  }
+
+  // Step 11: Weaning
+  else if (stepNum === 11) {
+    html = `<div class="card"><h3>第十一步：撤机评估</h3><p style="color:var(--text-secondary);">何时可以停止CRRT？满足以下越多条件越有把握：</p></div>
+    <div class="wf-choice-grid">
+      <div class="wf-choice${s.choices.weanUO?' selected':''}" onclick="wfToggleChoice('weanUO')"><div class="wf-choice-title">尿量恢复</div><div class="wf-choice-desc">>30 mL/h持续6h以上，或>400 mL/24h。ATN研究中标准：尿量>30mL/h→测6h肌酐清除率。</div></div>
+      <div class="wf-choice${s.choices.weanCr?' selected':''}" onclick="wfToggleChoice('weanCr')"><div class="wf-choice-title">肌酐下降</div><div class="wf-choice-desc">在恒定CRRT剂量下，血肌酐进行性下降→肾功能恢复迹象。</div></div>
+      <div class="wf-choice${s.choices.weanHD?' selected':''}" onclick="wfToggleChoice('weanHD')"><div class="wf-choice-title">血流动力学稳定</div><div class="wf-choice-desc">脱离升压药或仅需低剂量。可安全耐受液体正平衡短期波动。</div></div>
+      <div class="wf-choice${s.choices.weanLytes?' selected':''}" onclick="wfToggleChoice('weanLytes')"><div class="wf-choice-title">电解质/酸碱稳定</div><div class="wf-choice-desc">K⁺<5.5且无上升趋势，pH>7.30且无恶化趋势，无严重液体过负荷。</div></div>
+    </div>`;
+
+    const weanCount = [s.choices.weanUO, s.choices.weanCr, s.choices.weanHD, s.choices.weanLytes].filter(Boolean).length;
+    if (weanCount >= 3) {
+      html += `<div class="alert alert-safe"><strong>满足${weanCount}/4项 → 可以尝试停CRRT。</strong><br>
+      步骤：(1)停CRRT但保留导管 (2)密切监测尿量q2h+K⁺+肌酐 (3)若6-12h后尿量持续>30mL/h→拔管 (4)若再次少尿或K⁺↑→重新启动。<br>
+      肌酐清除率<12 mL/min一般不撤；>20 mL/min可撤（ATN标准）。</div>`;
+      html += `<div class="wf-highlight-box"><h4>LIBERATE-D (2026) 提示</h4><p>肾功能恢复期→保守策略（按需透析）可能加速肾功能恢复(64% vs 50%)。不建议僵化坚持每周3次IHD。</p></div>`;
+    } else if (weanCount >= 1) {
+      html += `<div class="alert alert-warn"><strong>满足${weanCount}/4项 → 部分满足，继续CRRT+每日评估撤机条件。</strong></div>`;
+    } else {
+      html += `<div class="alert alert-warn"><strong>满足${weanCount}/4项 → 暂不具备撤机条件。继续CRRT，每日重新评估。</strong><br>过早停止CRRT可能导致血流动力学再次恶化（参考Djaja 2024案例）。</div>`;
+    }
+
+    html += `<div class="wf-result-box" style="margin-top:16px;"><h4>全流程处方总结</h4><p style="color:var(--text-secondary);">以上11步形成了一个完整的CRRT决策-处方-监测-撤机闭环。建议每次CRRT查房时做三件事：</p>
+    <ol><li><strong>算FF：</strong>还在<20%吗？</li><li><strong>看滤器：</strong>TMP趋势？用了多久？</li><li><strong>核液体：</strong>24h累积平衡达标了吗？</li></ol></div>`;
+  }
+
+  document.getElementById('wfContent').innerHTML = html;
+  wfUpdateProgress();
+}
+
+function wfUpdateProgress() {
+  document.querySelectorAll('.wf-step-indicator').forEach(el => {
+    const s = parseInt(el.dataset.step);
+    el.classList.remove('active', 'done');
+    if (s === wfState.step) el.classList.add('active');
+    else if (s < wfState.step) el.classList.add('done');
+  });
+  document.getElementById('wfPrev').style.display = wfState.step > 1 ? '' : 'none';
+  const nextBtn = document.getElementById('wfNext');
+  if (wfState.step >= 11) {
+    nextBtn.textContent = '完成 ✓';
+    nextBtn.className = 'btn btn-primary';
+  } else {
+    nextBtn.textContent = '下一步 →';
+    nextBtn.className = 'btn btn-primary';
+  }
+}
+
+function wfToggleChoice(key) { wfState.choices[key] = !wfState.choices[key]; renderWorkflowStep(); }
+function wfSelectMode(m) { wfState.choices.mode = m; renderWorkflowStep(); }
+function wfSelectAnticoag(a) { wfState.choices.anticoag = a; renderWorkflowStep(); }
+
+function wfUpdateState() {
+  const w = document.getElementById('wfWeight'); if (w) wfState.weight = parseFloat(w.value) || 65;
+  const h = document.getElementById('wfHct'); if (h) wfState.hct = parseFloat(h.value) || 30;
+  const k = document.getElementById('wfK'); if (k) wfState.k = parseFloat(k.value) || 5.0;
+  const p = document.getElementById('wfPh'); if (p) wfState.ph = parseFloat(p.value) || 7.30;
+  const hc = document.getElementById('wfHco3'); if (hc) wfState.hco3 = parseFloat(hc.value) || 22;
+  const m = document.getElementById('wfMap'); if (m) wfState.map = parseFloat(m.value) || 70;
+  const qb = document.getElementById('wfQb'); if (qb) wfState.choices.qb = parseFloat(qb.value) || 150;
+  const hdf = document.getElementById('wfHdfRatio'); if (hdf) wfState.choices.hdfRatio = parseInt(hdf.value) || 50;
+  const pr = document.getElementById('wfPreRatio'); if (pr) wfState.choices.preRatio = parseInt(pr.value) || 50;
+  const nuf = document.getElementById('wfNetUF'); if (nuf) wfState.choices.netUF = parseFloat(nuf.value) || 80;
+  renderWorkflowStep();
+}
+
+function wfUpdateDose() {
+  const doseEl = document.getElementById('wfDose');
+  if (doseEl) { wfState.choices.dose = parseInt(doseEl.value); renderWorkflowStep(); }
+}
+
+document.getElementById('wfNext').addEventListener('click', () => {
+  if (wfState.step < 11) { wfState.step++; renderWorkflowStep(); }
+});
+document.getElementById('wfPrev').addEventListener('click', () => {
+  if (wfState.step > 1) { wfState.step--; renderWorkflowStep(); }
+});
+document.getElementById('wfReset').addEventListener('click', () => {
+  wfState.step = 1;
+  wfState.choices = {};
+  wfState.weight = 65; wfState.hct = 30; wfState.k = 5.8;
+  wfState.ph = 7.22; wfState.hco3 = 18; wfState.map = 60;
+  renderWorkflowStep();
+});
+
+// Step indicator click to jump
+document.getElementById('wfProgress').addEventListener('click', (e) => {
+  const step = e.target.dataset.step;
+  if (step) { wfState.step = parseInt(step); renderWorkflowStep(); }
+});
+
+// ===== Init =====
+function init() {
+  const state = loadState();
+
+  // Theme
+  if (state.theme === 'dark') setTheme(true);
+
+  // Tab
+  if (state.activeTab && document.querySelector(`.nav-tab[data-tab="${state.activeTab}"]`)) {
+    switchTab(state.activeTab);
+  }
+
+  // Restore calculator inputs
+  if (state.prescription) {
+    const p = state.prescription;
+    if (p.weight !== undefined) calcEls.calcWeight.value = p.weight;
+    if (p.hct !== undefined) calcEls.calcHct.value = p.hct;
+    if (p.mode) calcEls.calcMode.value = p.mode;
+    if (p.dose !== undefined) calcEls.calcDose.value = p.dose;
+    if (p.hdfRatio !== undefined) calcEls.calcHdfRatio.value = p.hdfRatio * 100;
+    if (p.preDilution !== undefined) calcEls.calcPreDilution.value = p.preDilution * 100;
+    if (p.netUF !== undefined) calcEls.calcNetUF.value = p.netUF;
+    if (p.qbOverride) calcEls.calcQb.value = p.qbOverride;
+  }
+
+  // Restore AC mode
+  if (state.acMode === 'heparin') {
+    document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+    const hepTab = document.querySelector('.sub-tab[data-sub="heparin"]');
+    if (hepTab) hepTab.classList.add('active');
+    document.getElementById('acCitratePanel').style.display = 'none';
+    document.getElementById('acHeparinPanel').style.display = '';
+  }
+
+  updateModeUI();
+  onCalcChange();
+  calcCitrate();
+  calcHeparin();
+  renderKBCategories();
+  renderKBEntries();
+  renderChecklist();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const map = { '1':'calculator', '2':'anticoag', '3':'knowledge', '4':'checklist', '5':'workflow' };
+  if (e.altKey && map[e.key]) { e.preventDefault(); switchTab(map[e.key]); }
+});
+
+init();
+</script>
+</body>
+</html>
